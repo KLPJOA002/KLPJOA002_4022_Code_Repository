@@ -31,16 +31,28 @@ static void print_usage(const char* prog)
 
 // ── Depth post-processing ─────────────────────────────────────────────────────
 struct DepthFilters {
-    rs2::decimation_filter   decimation;
+    //rs2::decimation_filter   decimation;
     rs2::disparity_transform to_disparity{true};
     rs2::spatial_filter      spatial;
     rs2::temporal_filter     temporal;
     rs2::disparity_transform to_depth{false};
     rs2::hole_filling_filter hole_fill;
 
+    DepthFilters()
+    {
+        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f);
+        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f);
+        spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.f);
+
+        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.25f);
+        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 10.f);
+
+        hole_fill.set_option(RS2_OPTION_HOLES_FILL, 1.f);
+    }
+
     rs2::depth_frame process(rs2::depth_frame depth)
     {
-        depth = decimation.process(depth);
+        //depth = decimation.process(depth);
         depth = to_disparity.process(depth);
         depth = spatial.process(depth);
         depth = temporal.process(depth);
@@ -76,6 +88,11 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
     if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
         depth_sensor.set_option(RS2_OPTION_VISUAL_PRESET,
                                 RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
+
+    if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
+        depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f);
+
+        //depth_sensor.supports(RS2_o)
     return ctx;
 }
 
