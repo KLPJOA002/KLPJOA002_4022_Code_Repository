@@ -31,7 +31,7 @@ static void print_usage(const char* prog)
 
 // ── Depth post-processing ─────────────────────────────────────────────────────
 struct DepthFilters {
-    //rs2::decimation_filter   decimation;
+    rs2::decimation_filter   decimation;
     rs2::disparity_transform to_disparity{true};
     rs2::spatial_filter      spatial;
     rs2::temporal_filter     temporal;
@@ -42,10 +42,11 @@ struct DepthFilters {
     {
         spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f);
         spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f);
-        spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 2.f);
+        spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.f);
 
-        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.25f);
-        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 10.f);
+        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.01f);
+        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 80.f);
+        temporal.set_option(RS2_OPTION_HOLES_FILL, 1.f);
 
         hole_fill.set_option(RS2_OPTION_HOLES_FILL, 1.f);
     }
@@ -480,8 +481,9 @@ int main(int argc, char* argv[])
         }
         if (frame_limit > 0 && frame_count >= frame_limit) break;
 
-        rs2::frameset frames;
-        if (!ctx.pipe.poll_for_frames(&frames)) continue;
+        // rs2::frameset frames;
+        // if (!ctx.pipe.poll_for_frames(&frames)) continue;
+        rs2::frameset frames = ctx.pipe.wait_for_frames();
 
         if (id_mode) {
             // ── ID mode loop: detect all 36h11 tags, log unique IDs ───────────
