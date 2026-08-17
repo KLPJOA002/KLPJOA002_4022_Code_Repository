@@ -40,15 +40,15 @@ struct DepthFilters {
 
     DepthFilters()
     {
-        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f);
-        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f);
-        spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.f);
+        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f); // Spatial filter over small history
+        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f); //threshold for disable low
+        spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.f); // filter magnitude of 1
 
-        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.01f);
-        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 80.f);
-        temporal.set_option(RS2_OPTION_HOLES_FILL, 1.f);
+        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.6f); //Set temporal filter to apply long filter windows
+        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 100.f); //set the delta threshold high to avoid disabbling on smal temporal changes
+        temporal.set_option(RS2_OPTION_HOLES_FILL, 1.f); //select pixel only if valid in the past 8 frames
 
-        hole_fill.set_option(RS2_OPTION_HOLES_FILL, 1.f);
+        hole_fill.set_option(RS2_OPTION_HOLES_FILL, 1.f); //set hole filling option to :something
     }
 
     rs2::depth_frame process(rs2::depth_frame depth)
@@ -91,9 +91,8 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
                                 RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
 
     if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
-        depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f);
+        depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
 
-        //depth_sensor.supports(RS2_o)
     return ctx;
 }
 
@@ -233,7 +232,17 @@ static std::vector<Detection> detect_markers(const cv::Mat& gray)
     //static auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::makePtr<cv::aruco::Dictionary>(cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11));
 
-    static cv::aruco::DetectorParameters params;
+    static cv::aruco::DetectorParameters params = []() {
+        cv::aruco::DetectorParameters p;
+
+        p.adaptiveThreshWinSizeMin = 3; //change parameters of the aruco decector for better sunlight conditions
+        p.adaptiveThreshWinSizeMax = 53;
+        p.adaptiveThreshWinSizeStep = 4;
+
+        p.adaptiveThreshConstant = 7;
+
+        return p;
+    }();
 
     std::vector<int>                        all_ids;
     std::vector<std::vector<cv::Point2f>>   all_corners;
@@ -275,7 +284,18 @@ static std::vector<Detection> detect_all_markers(const cv::Mat& gray)
 {
     //static auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
     cv::Ptr<cv::aruco::Dictionary> dictionary = cv::makePtr<cv::aruco::Dictionary>(cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11));
-    static cv::aruco::DetectorParameters params;
+    static cv::aruco::DetectorParameters params = []() {
+        cv::aruco::DetectorParameters p;
+
+        p.adaptiveThreshWinSizeMin = 3; //change parameters of the aruco decector for better sunlight conditions
+        p.adaptiveThreshWinSizeMax = 53;
+        p.adaptiveThreshWinSizeStep = 4;
+
+        p.adaptiveThreshConstant = 7;
+
+        return p;
+    }();
+
 
     std::vector<int>                      all_ids;
     std::vector<std::vector<cv::Point2f>> all_corners;
@@ -493,6 +513,10 @@ int main(int argc, char* argv[])
             cv::Mat color_bgr = to_bgr(color_frame);
             cv::Mat gray;
             cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);
+            
+            // cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
+            // clahe->apply(gray,gray);
+
             auto detections = detect_all_markers(gray);
 
             for (const auto& d : detections) {
@@ -566,6 +590,10 @@ int main(int argc, char* argv[])
             // ── Marker detection ─────────────────────────────────────────────
             cv::Mat gray;
             cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);
+
+            cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
+            clahe->apply(gray,gray); //Applied CLAHE after gray conversion to reduce dynamic range of image 
+
             auto detections = detect_all_markers(gray);
             draw_detections(color_bgr, detections);
 
