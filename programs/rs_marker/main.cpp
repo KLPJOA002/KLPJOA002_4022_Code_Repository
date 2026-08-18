@@ -83,7 +83,7 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
         if (!output_file.empty())
             cfg.enable_record_to_file(output_file);
     }
-    ctx.profile = ctx.pipe.start(cfg);
+    ctx.profile = ctx.pipe.start(cfg);//start the pipeline with the cfg configuration
 
     auto depth_sensor = ctx.profile.get_device().first<rs2::depth_sensor>();
     if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
@@ -436,7 +436,7 @@ int main(int argc, char* argv[])
         }
     }
     // ─────────────────────────────────────────────────────────────────────────
-
+    //write the text dialog displaying which mode and the details therein.
     if (id_mode) {
         std::cout << "ID MODE — RGB-only, detect ALL AprilTag 36h11 tags\n"
                   << "Wave each tag in front of the camera to confirm it works.\n"
@@ -507,19 +507,19 @@ int main(int argc, char* argv[])
 
         if (id_mode) {
             // ── ID mode loop: detect all 36h11 tags, log unique IDs ───────────
-            rs2::video_frame color_frame = frames.get_color_frame();
+            rs2::video_frame color_frame = frames.get_color_frame(); //get colour frame from realsense 
             if (!color_frame) continue;
 
             cv::Mat color_bgr = to_bgr(color_frame);
-            cv::Mat gray;
+            cv::Mat gray; //convert to grey for detection
             cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);
             
             // cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
             // clahe->apply(gray,gray);
 
-            auto detections = detect_all_markers(gray);
+            auto detections = detect_all_markers(gray); //detect apriltags
 
-            for (const auto& d : detections) {
+            for (const auto& d : detections) { //lis detection on console
                 if (seen_ids.insert(d.id).second) {
                     std::cout << "[NEW] ID: " << d.id
                               << "  (total unique: " << seen_ids.size() << ")\n"
@@ -527,7 +527,7 @@ int main(int argc, char* argv[])
                 }
             }
 
-            draw_detections(color_bgr, detections);
+            draw_detections(color_bgr, detections); //draw each detection on colour frame
 
             // Overlay unique-ID list in top-left corner
             cv::putText(color_bgr,
@@ -542,66 +542,68 @@ int main(int argc, char* argv[])
                 y += 22;
             }
 
-            cv::imshow("AprilTag ID scanner (36h11)", color_bgr);
+            cv::imshow("AprilTag ID scanner (36h11)", color_bgr); //display the colour frame
             if (cv::waitKey(1) == 'q') break;
-            // ─────────────────────────────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────
         } else if (test_mode) {
             // ── Test mode loop: RGB only ──────────────────────────────────────
-            rs2::video_frame color_frame = frames.get_color_frame();
+            rs2::video_frame color_frame = frames.get_color_frame(); //get colour frame from realsense
             if (!color_frame) continue;
 
-            cv::Mat color_bgr = to_bgr(color_frame);
+            cv::Mat color_bgr = to_bgr(color_frame); 
+            cv::Mat gray; 
+            cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);  //convert to gray for april tag detection
 
-            cv::Mat gray;
-            cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);
             auto detections = detect_markers(gray);
-            draw_detections(color_bgr, detections);
+            draw_detections(color_bgr, detections); //detect tags and draw onto colour frame
 
-            video_writer.write(color_bgr);
+            video_writer.write(color_bgr); //write the frame to the stored video file
 
-            if (!detections.empty()) {
+            if (!detections.empty()) { //log each detection and its time?
                 double ts_ms = std::chrono::duration<double, std::milli>(
                     std::chrono::steady_clock::now() - t_start).count();
                 log_detections(csv, frame_count, ts_ms, detections, rs2::frame{});
             }
 
-            cv::imshow("RGB + markers (test)", color_bgr);
+            cv::imshow("RGB + markers (test)", color_bgr); //displa the frame
             if (cv::waitKey(1) == 'q') break;
-            // ─────────────────────────────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────
         } else {
             // ── Normal mode loop ──────────────────────────────────────────────
             if (auto a = frames.first_or_default(RS2_STREAM_ACCEL))
-                last_accel = a.as<rs2::motion_frame>().get_motion_data();
-            if (auto g = frames.first_or_default(RS2_STREAM_GYRO))
-                last_gyro  = g.as<rs2::motion_frame>().get_motion_data();
+                last_accel = a.as<rs2::motion_frame>().get_motion_data(); //get accelerometer date from frame
+            if (auto g = frames.first_or_default(RS2_STREAM_GYRO)) 
+                last_gyro  = g.as<rs2::motion_frame>().get_motion_data(); //get gyro data from frame
 
-            frames = align_to_color.process(frames);
-            rs2::depth_frame raw_depth = frames.get_depth_frame();
+            frames = align_to_color.process(frames); // align the depth pixels to colour?
+            rs2::depth_frame raw_depth = frames.get_depth_frame(); //get depth frame
             if (!raw_depth) continue;
 
-            rs2::depth_frame filtered   = filters.process(raw_depth);
-            rs2::video_frame color_frame = frames.get_color_frame();
+            rs2::depth_frame filtered   = filters.process(raw_depth);  //filter depth
+            rs2::video_frame color_frame = frames.get_color_frame();  //get colour frame
             cv::Mat          color_bgr  = to_bgr(color_frame);
-            cv::Mat          depth_bgr  = depth_to_mat(colorizer.colorize(filtered));
+            cv::Mat          depth_bgr  = depth_to_mat(colorizer.colorize(filtered)); //convert both colour and depth to bgr format
 
             double ts_ms = std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - t_start).count();
+                std::chrono::steady_clock::now() - t_start).count(); // elapsed time?
 
             // ── Marker detection ─────────────────────────────────────────────
             cv::Mat gray;
-            cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);
+            cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY); //convert to gray for detection
 
             cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
             clahe->apply(gray,gray); //Applied CLAHE after gray conversion to reduce dynamic range of image 
 
-            auto detections = detect_all_markers(gray);
+            auto detections = detect_all_markers(gray); //detect tags and draw on colour frame
             draw_detections(color_bgr, detections);
 
             if (!detections.empty())
                 log_detections(csv, frame_count, ts_ms, detections, filtered);
             // ─────────────────────────────────────────────────────────────────
 
-            show_frames(color_bgr, depth_bgr);
+            show_frames(color_bgr, depth_bgr); //show both colour and depth frames
             if (cv::waitKey(1) == 'q') break;
 
             // Depth stats
@@ -611,7 +613,7 @@ int main(int argc, char* argv[])
                 for (int x = 0; x < w; ++x) {
                     float d = filtered.get_distance(x, y);
                     if (d > 0.0f) { sum += d; ++valid; }
-                }
+                } //get depth stats for which is the best frame
 
             // Best-frame selection: most valid depth pixels == fewest holes
             if (valid > best_valid_pixels) {
@@ -624,7 +626,7 @@ int main(int argc, char* argv[])
                 best_ts_ms        = ts_ms;
             }
 
-            if (frame_count % 5 == 0) {
+            if (frame_count % 5 == 0) { //display stats for every 5th frame
                 double elapsed = std::chrono::duration<double>(
                     std::chrono::steady_clock::now() - t_start).count();
                 print_stats(frame_count, elapsed, valid > 0 ? sum / valid : 0.0,
@@ -634,7 +636,7 @@ int main(int argc, char* argv[])
         }
 
         ++frame_count;
-    }
+    } //end while loop
 
     ctx.pipe.stop();
     if (test_mode) video_writer.release();
