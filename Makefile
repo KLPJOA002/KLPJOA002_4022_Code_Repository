@@ -1,5 +1,5 @@
 CXX      := g++
-CXXFLAGS := -std=c++14 -O2 -Wall -Wextra -Iinclude
+CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Iinclude
 LIBS     := -lrealsense2 -lpthread
 
 # ── Add new programs here ──────────────────────────────────────────────────────
@@ -35,14 +35,18 @@ build/lib/%.o: src/%.cpp | build/lib
 build/lib:
 	mkdir -p $@
 
+# programs/rs_marker/ now has main.cpp + mountSerial.cpp
 define PROGRAM_template
 build/$(1):
 	mkdir -p $$@
 
-$(1): $(LIB_OBJS) build/$(1)/main.o
+$(1)_SRCS := $(wildcard programs/$(1)/*.cpp)
+$(1)_OBJS := $$($(1)_SRCS:programs/$(1)/%.cpp=build/$(1)/%.o)
+
+$(1): $(LIB_OBJS) $$($(1)_OBJS)
 	$(CXX) $(CXXFLAGS) $$^ -o $$@ $(LIBS) $$($(1)_EXTRA_LIBS)
 
-build/$(1)/main.o: programs/$(1)/main.cpp | build/$(1)
+build/$(1)/%.o: programs/$(1)/%.cpp | build/$(1)
 	$(CXX) $(CXXFLAGS) $$($(1)_EXTRA_CFLAGS) -c $$< -o $$@
 endef
 

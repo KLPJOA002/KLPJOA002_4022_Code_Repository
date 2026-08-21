@@ -12,6 +12,8 @@
 #include <ctime>
 #include <set>
 #include <sys/stat.h>
+#include <stdio.h>
+#include "mountSerial.h"
 
 static std::atomic<bool> g_running{true};
 static void signal_handler(int) { g_running = false; }
@@ -168,11 +170,11 @@ static std::ofstream open_csv(const std::string& path)
 
 // Derives ply path from bag name: "capture.bag" → "capture.ply".
 // Falls back to "best_frame.ply" when not recording.
-static std::string ply_path(const std::string& bag)
+static std::string ply_path(const std::string& bag, int angle, int side)
 {
     if (bag.empty()) return "best_frame.ply";
     auto dot = bag.rfind('.');
-    return (dot == std::string::npos ? bag : bag.substr(0, dot)) + ".ply";
+    return (dot == std::string::npos ? bag : bag.substr(0, dot)) +"_"+std::to_string(angle*side)+ ".ply";
 }
 
 // Directory portion of a path, or "." if there is none.
@@ -367,6 +369,15 @@ int main(int argc, char* argv[])
     bool        test_mode     = false;
     bool        id_mode       = false;
 
+    mountSerial serial;
+    char read_buf[30];
+    int angle = 0;
+    int angle_limit = 0;
+    int step = 10;
+    int side = 1;
+    bool flipped = false;
+    //int repetition = 1;
+
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if ((arg == "-o" || arg == "--output") && i + 1 < argc)
@@ -377,6 +388,10 @@ int main(int argc, char* argv[])
             duration_sec = std::stoi(argv[++i]);
         else if ((arg == "-n" || arg == "--frames") && i + 1 < argc)
             frame_limit = std::stoll(argv[++i]);
+        else if ((arg == "-a" || arg == "--angle") && i + 1 < argc)
+            angle_limit = std::stoi(argv[++i]);
+        else if ((arg == "-s" || arg == "--step") && i + 1 < argc)
+            step = std::stoi(argv[++i]);
         else if (arg == "-test" || arg == "--test")
             test_mode = true;
         else if (arg == "-id" || arg == "--id")
@@ -385,297 +400,332 @@ int main(int argc, char* argv[])
         else { std::cerr << "Unknown argument: " << arg << "\n"; print_usage(argv[0]); return 1; }
     }
 
-    if (id_mode && test_mode) {
-        std::cerr << "Error: -id and -test cannot be used together.\n"; return 1;
-    }
-    if (!output_dir.empty() && !output_file.empty()) {
-        std::cerr << "Error: -o and -D cannot be used together.\n"; return 1;
-    }
-    if (!output_dir.empty()) {
-        std::string session_dir = make_session_dir(output_dir);
-        std::string ts_name     = session_dir.substr(session_dir.rfind('/') + 1);
-        output_file = session_dir + "/" + ts_name + ".bag";
-        std::cout << "Session : " << session_dir << "\n";
+    if (angle>=60)
+    {
+        printf("Input angle too large, set to 60.\n");
+        angle = 60;
     }
 
-    std::signal(SIGINT,  signal_handler);
-    std::signal(SIGTERM, signal_handler);
+    //declare the time of the session
+    //const std::string run_ts = timestamp_str();
 
-    PipelineCtx ctx;
-    try {
-        ctx = start_pipeline((test_mode || id_mode) ? "" : output_file,
-                             test_mode || id_mode);
-    } catch (const rs2::error& e) {
-        std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
-    }
+    if (step<=0) step = 1;
+    //start global loop here?
+    printf("Beginning loop now\n");
+    printf("Number of iterations = %d\n",(2*(angle_limit/step)+1));
+    for (int repetition = 0; repetition<(2*(angle_limit/step)+1);repetition++)
+    {
+        printf("Iteration %d\n",repetition);
 
-    std::string   csv_file = id_mode ? "" : csv_path(test_mode ? "" : output_file);
-    std::ofstream csv;
-    if (!id_mode) {
-        csv = open_csv(csv_file);
-        if (!csv.is_open()) {
-            std::cerr << "Failed to open CSV: " << csv_file << "\n"; return 1;
+        if (id_mode && test_mode) {
+            std::cerr << "Error: -id and -test cannot be used together.\n"; return 1;
         }
-    }
-
-    // ── Best-frame outputs: only meaningful in normal mode (depth + IMU) ──────
-    bool        capture_best = !test_mode && !id_mode;
-    std::string ply_file     = capture_best ? ply_path(output_file) : "";
-    std::string imu_file     = capture_best
-        ? (output_file.empty() ? "imu.csv" : dir_of(output_file) + "/imu.csv")
-        : "";
-
-    // ── Test mode: open video writer ──────────────────────────────────────────
-    cv::VideoWriter video_writer;
-    std::string     vid_file;
-    if (test_mode) {
-        vid_file     = video_path(output_file);
-        video_writer = open_video(vid_file, 848, 480, 5.0);
-        if (!video_writer.isOpened()) {
-            std::cerr << "Failed to open video writer: " << vid_file << "\n"; return 1;
+        if (!output_dir.empty() && !output_file.empty()) {
+            std::cerr << "Error: -o and -D cannot be used together.\n"; return 1;
         }
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-    //write the text dialog displaying which mode and the details therein.
-    if (id_mode) {
-        std::cout << "ID MODE — RGB-only, detect ALL AprilTag 36h11 tags\n"
-                  << "Wave each tag in front of the camera to confirm it works.\n"
-                  << "New unique IDs will be printed as they are detected.\n"
-                  << "Stream  : Color 1280x720\n"
-                  << (duration_sec > 0
-                        ? "Duration: " + std::to_string(duration_sec) + "s\n"
-                        : "Press q or Ctrl+C to stop.\n")
-                  << std::string(60, '-') << "\n";
-    } else if (test_mode) {
-        std::cout << "TEST MODE — RGB-only, no depth/IMU\n"
-                  << "Detecting AprilTag 36h11 — ALL tags\n"
-                  << "Stream  : Color 848x480\n"
-                  << "Video   : " << vid_file  << "\n"
-                  << "CSV     : " << csv_file  << "\n"
-                  << (duration_sec > 0
-                        ? "Duration: " + std::to_string(duration_sec) + "s\n"
-                        : "Press q or Ctrl+C to stop.\n")
-                  << std::string(60, '-') << "\n";
-    } else {
-        std::cout << "Detecting AprilTag 36h11 — ALL tags\n"
-                  << "Streams : Depth 848x480 | Color 848x480 | Accel | Gyro\n"
-                  << "Record  : " << (output_file.empty() ? "off" : output_file) << "\n"
-                  << "CSV     : " << csv_file << "\n"
-                  << "PLY     : " << ply_file << "  (best frame — least holes)\n"
-                  << "IMU     : " << imu_file << "\n"
-                  << (duration_sec > 0
-                        ? "Duration: " + std::to_string(duration_sec) + "s\n"
-                        : "")
-                  << (frame_limit > 0
-                        ? "Frames  : " + std::to_string(frame_limit) + "\n"
-                        : "")
-                  << (duration_sec == 0 && frame_limit == 0
-                        ? "Press q or Ctrl+C to stop.\n"
-                        : "")
-                  << std::string(60, '-') << "\n";
-    }
-
-    DepthFilters   filters;
-    rs2::align     align_to_color(RS2_STREAM_COLOR);
-    rs2::colorizer colorizer;
-    rs2::pointcloud pc;
-
-    auto       t_start     = std::chrono::steady_clock::now();
-    long long  frame_count = 0;
-    rs2_vector last_accel{}, last_gyro{};
-    std::set<int> seen_ids;  // used by -id mode
-
-    // ── Best-frame tracking (normal mode): most valid depth pixels = fewest holes ──
-    rs2::depth_frame best_depth{rs2::frame{}};
-    rs2::video_frame best_color{rs2::frame{}};
-    rs2_vector       best_accel{}, best_gyro{};
-    long long        best_frame_idx    = -1;
-    double           best_ts_ms        = 0.0;
-    int              best_valid_pixels = -1;
-
-    while (g_running) {
-        if (duration_sec > 0) {
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - t_start).count();
-            if (elapsed >= duration_sec) break;
+        if (!output_dir.empty()) {
+            std::string session_dir = make_session_dir(output_dir);
+            std::string ts_name     = session_dir.substr(session_dir.rfind('/') + 1);
+            output_file = session_dir + "/" + ts_name +std::to_string(angle*side)+ ".bag";
+            std::cout << "Session : " << session_dir << "\n";
         }
-        if (frame_limit > 0 && frame_count >= frame_limit) break;
 
-        // rs2::frameset frames;
-        // if (!ctx.pipe.poll_for_frames(&frames)) continue;
-        rs2::frameset frames = ctx.pipe.wait_for_frames();
+        std::signal(SIGINT,  signal_handler);
+        std::signal(SIGTERM, signal_handler);
+
+        PipelineCtx ctx;
+        try {
+            ctx = start_pipeline((test_mode || id_mode) ? "" : output_file,
+                                test_mode || id_mode);
+        } catch (const rs2::error& e) {
+            std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
+        }
+
+        std::string   csv_file = id_mode ? "" : csv_path(test_mode ? "" : output_file);
+        std::ofstream csv;
+        if (!id_mode) {
+            csv = open_csv(csv_file);
+            if (!csv.is_open()) {
+                std::cerr << "Failed to open CSV: " << csv_file << "\n"; return 1;
+            }
+        }
+
+        // ── Best-frame outputs: only meaningful in normal mode (depth + IMU) ──────
+        bool        capture_best = !test_mode && !id_mode;
+        std::string ply_file     = capture_best ? ply_path(output_file,angle,side) : "";
+        std::string imu_file     = capture_best
+            ? (output_file.empty() ? "imu_"+std::to_string(angle*side)+".csv" : dir_of(output_file) + "/imu_"+std::to_string(angle*side)+".csv")
+            : "";
+
+        // ── Test mode: open video writer ──────────────────────────────────────────
+        cv::VideoWriter video_writer;
+        std::string     vid_file;
+        if (test_mode) {
+            vid_file     = video_path(output_file);
+            video_writer = open_video(vid_file, 848, 480, 5.0);
+            if (!video_writer.isOpened()) {
+                std::cerr << "Failed to open video writer: " << vid_file << "\n"; return 1;
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+        //write the text dialog displaying which mode and the details therein.
+        if (id_mode) {
+            std::cout << "ID MODE — RGB-only, detect ALL AprilTag 36h11 tags\n"
+                    << "Wave each tag in front of the camera to confirm it works.\n"
+                    << "New unique IDs will be printed as they are detected.\n"
+                    << "Stream  : Color 1280x720\n"
+                    << (duration_sec > 0
+                            ? "Duration: " + std::to_string(duration_sec) + "s\n"
+                            : "Press q or Ctrl+C to stop.\n")
+                    << std::string(60, '-') << "\n";
+        } else if (test_mode) {
+            std::cout << "TEST MODE — RGB-only, no depth/IMU\n"
+                    << "Detecting AprilTag 36h11 — ALL tags\n"
+                    << "Stream  : Color 848x480\n"
+                    << "Video   : " << vid_file  << "\n"
+                    << "CSV     : " << csv_file  << "\n"
+                    << (duration_sec > 0
+                            ? "Duration: " + std::to_string(duration_sec) + "s\n"
+                            : "Press q or Ctrl+C to stop.\n")
+                    << std::string(60, '-') << "\n";
+        } else {
+            std::cout << "Detecting AprilTag 36h11 — ALL tags\n"
+                    << "Streams : Depth 848x480 | Color 848x480 | Accel | Gyro\n"
+                    << "Record  : " << (output_file.empty() ? "off" : output_file) << "\n"
+                    << "CSV     : " << csv_file << "\n"
+                    << "PLY     : " << ply_file << "  (best frame — least holes)\n"
+                    << "IMU     : " << imu_file << "\n"
+                    << (duration_sec > 0
+                            ? "Duration: " + std::to_string(duration_sec) + "s\n"
+                            : "")
+                    << (frame_limit > 0
+                            ? "Frames  : " + std::to_string(frame_limit) + "\n"
+                            : "")
+                    << (duration_sec == 0 && frame_limit == 0
+                            ? "Press q or Ctrl+C to stop.\n"
+                            : "")
+                    << std::string(60, '-') << "\n";
+        }
+
+        DepthFilters   filters;
+        rs2::align     align_to_color(RS2_STREAM_COLOR);
+        rs2::colorizer colorizer;
+        rs2::pointcloud pc;
+
+        auto       t_start     = std::chrono::steady_clock::now();
+        long long  frame_count = 0;
+        rs2_vector last_accel{}, last_gyro{};
+        std::set<int> seen_ids;  // used by -id mode
+
+        // ── Best-frame tracking (normal mode): most valid depth pixels = fewest holes ──
+        rs2::depth_frame best_depth{rs2::frame{}};
+        rs2::video_frame best_color{rs2::frame{}};
+        rs2_vector       best_accel{}, best_gyro{};
+        long long        best_frame_idx    = -1;
+        double           best_ts_ms        = 0.0;
+        int              best_valid_pixels = -1;
+
+        serial.homeCamera(read_buf);
+        printf("Received message: %s\n", read_buf);
+
+        while (g_running) {
+            if (duration_sec > 0) {
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::steady_clock::now() - t_start).count();
+                if (elapsed >= duration_sec) break;
+            }
+            if (frame_limit > 0 && frame_count >= frame_limit) break;
+
+            // rs2::frameset frames;
+            // if (!ctx.pipe.poll_for_frames(&frames)) continue;
+            rs2::frameset frames = ctx.pipe.wait_for_frames();
+
+            if (id_mode) {
+                // ── ID mode loop: detect all 36h11 tags, log unique IDs ───────────
+                rs2::video_frame color_frame = frames.get_color_frame(); //get colour frame from realsense 
+                if (!color_frame) continue;
+
+                cv::Mat color_bgr = to_bgr(color_frame);
+                cv::Mat gray; //convert to grey for detection
+                cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);
+                
+                // cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
+                // clahe->apply(gray,gray);
+
+                auto detections = detect_all_markers(gray); //detect apriltags
+
+                for (const auto& d : detections) { //lis detection on console
+                    if (seen_ids.insert(d.id).second) {
+                        std::cout << "[NEW] ID: " << d.id
+                                << "  (total unique: " << seen_ids.size() << ")\n"
+                                << std::flush;
+                    }
+                }
+
+                draw_detections(color_bgr, detections); //draw each detection on colour frame
+
+                // Overlay unique-ID list in top-left corner
+                cv::putText(color_bgr,
+                            "Unique IDs seen: " + std::to_string(seen_ids.size()),
+                            cv::Point(10, 28),
+                            cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 220, 255), 2);
+                int y = 58;
+                for (int id : seen_ids) {
+                    cv::putText(color_bgr, "  " + std::to_string(id),
+                                cv::Point(10, y),
+                                cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 220, 255), 1);
+                    y += 22;
+                }
+
+                cv::imshow("AprilTag ID scanner (36h11)", color_bgr); //display the colour frame
+                if (cv::waitKey(1) == 'q') break;
+
+            // ─────────────────────────────────────────────────────────────────
+            } else if (test_mode) {
+                // ── Test mode loop: RGB only ──────────────────────────────────────
+                rs2::video_frame color_frame = frames.get_color_frame(); //get colour frame from realsense
+                if (!color_frame) continue;
+
+                cv::Mat color_bgr = to_bgr(color_frame); 
+                cv::Mat gray; 
+                cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);  //convert to gray for april tag detection
+
+                auto detections = detect_markers(gray);
+                draw_detections(color_bgr, detections); //detect tags and draw onto colour frame
+
+                video_writer.write(color_bgr); //write the frame to the stored video file
+
+                if (!detections.empty()) { //log each detection and its time?
+                    double ts_ms = std::chrono::duration<double, std::milli>(
+                        std::chrono::steady_clock::now() - t_start).count();
+                    log_detections(csv, frame_count, ts_ms, detections, rs2::frame{});
+                }
+
+                cv::imshow("RGB + markers (test)", color_bgr); //displa the frame
+                if (cv::waitKey(1) == 'q') break;
+
+            // ─────────────────────────────────────────────────────────────────
+            } else {
+                // ── Normal mode loop ──────────────────────────────────────────────
+                if (auto a = frames.first_or_default(RS2_STREAM_ACCEL))
+                    last_accel = a.as<rs2::motion_frame>().get_motion_data(); //get accelerometer date from frame
+                if (auto g = frames.first_or_default(RS2_STREAM_GYRO)) 
+                    last_gyro  = g.as<rs2::motion_frame>().get_motion_data(); //get gyro data from frame
+
+                frames = align_to_color.process(frames); // align the depth pixels to colour?
+                rs2::depth_frame raw_depth = frames.get_depth_frame(); //get depth frame
+                if (!raw_depth) continue;
+
+                rs2::depth_frame filtered   = filters.process(raw_depth);  //filter depth
+                rs2::video_frame color_frame = frames.get_color_frame();  //get colour frame
+                cv::Mat          color_bgr  = to_bgr(color_frame);
+                cv::Mat          depth_bgr  = depth_to_mat(colorizer.colorize(filtered)); //convert both colour and depth to bgr format
+
+                double ts_ms = std::chrono::duration<double, std::milli>(
+                    std::chrono::steady_clock::now() - t_start).count(); // elapsed time?
+
+                // ── Marker detection ─────────────────────────────────────────────
+                cv::Mat gray;
+                cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY); //convert to gray for detection
+
+                cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
+                clahe->apply(gray,gray); //Applied CLAHE after gray conversion to reduce dynamic range of image 
+
+                auto detections = detect_all_markers(gray); //detect tags and draw on colour frame
+                draw_detections(color_bgr, detections);
+
+                if (!detections.empty())
+                    log_detections(csv, frame_count, ts_ms, detections, filtered);
+                // ─────────────────────────────────────────────────────────────────
+
+                show_frames(color_bgr, depth_bgr); //show both colour and depth frames
+                if (cv::waitKey(1) == 'q') break;
+
+                // Depth stats
+                double sum = 0.0; int valid = 0;
+                const int w = filtered.get_width(), h = filtered.get_height();
+                for (int y = 0; y < h; ++y)
+                    for (int x = 0; x < w; ++x) {
+                        float d = filtered.get_distance(x, y);
+                        if (d > 0.0f) { sum += d; ++valid; }
+                    } //get depth stats for which is the best frame
+
+                // Best-frame selection: most valid depth pixels == fewest holes
+                if (valid > best_valid_pixels) {
+                    best_valid_pixels = valid;
+                    best_depth        = filtered;
+                    best_color        = color_frame;
+                    best_accel        = last_accel;
+                    best_gyro         = last_gyro;
+                    best_frame_idx    = frame_count;
+                    best_ts_ms        = ts_ms;
+                }
+
+                if (frame_count % 5 == 0) { //display stats for every 5th frame
+                    double elapsed = std::chrono::duration<double>(
+                        std::chrono::steady_clock::now() - t_start).count();
+                    print_stats(frame_count, elapsed, valid > 0 ? sum / valid : 0.0,
+                                last_accel, last_gyro);
+                }
+                // ─────────────────────────────────────────────────────────────────
+                
+            }
+
+            ++frame_count;
+        } //end while loop
+
+        ctx.pipe.stop();
+        if (test_mode) video_writer.release();
+
+        // ── Export best frame (most valid depth pixels = fewest holes) ────────────
+        if (capture_best && best_valid_pixels >= 0) {
+            pc.map_to(best_color);
+            rs2::points points = pc.calculate(best_depth);
+            points.export_to_ply(ply_file, best_color);
+            write_imu_csv(imu_file, best_frame_idx, best_ts_ms, best_accel, best_gyro);
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        double elapsed = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - t_start).count();
+        std::cout << "\n" << std::string(60, '-') << "\n"
+                << "Frames  : " << frame_count << "\n"
+                << "Duration: " << std::fixed << std::setprecision(2) << elapsed << "s\n";
 
         if (id_mode) {
-            // ── ID mode loop: detect all 36h11 tags, log unique IDs ───────────
-            rs2::video_frame color_frame = frames.get_color_frame(); //get colour frame from realsense 
-            if (!color_frame) continue;
-
-            cv::Mat color_bgr = to_bgr(color_frame);
-            cv::Mat gray; //convert to grey for detection
-            cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);
-            
-            // cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
-            // clahe->apply(gray,gray);
-
-            auto detections = detect_all_markers(gray); //detect apriltags
-
-            for (const auto& d : detections) { //lis detection on console
-                if (seen_ids.insert(d.id).second) {
-                    std::cout << "[NEW] ID: " << d.id
-                              << "  (total unique: " << seen_ids.size() << ")\n"
-                              << std::flush;
+            std::cout << "Unique IDs detected (" << seen_ids.size() << "): ";
+            for (int id : seen_ids) std::cout << id << " ";
+            std::cout << "\n";
+        } else {
+            std::cout << "CSV     : " << csv_file << "\n";
+            if (test_mode) {
+                std::cout << "Video   : " << vid_file << "\n";
+            } else {
+                if (!output_file.empty())
+                    std::cout << "Bag     : " << output_file << "\n";
+                if (best_valid_pixels >= 0) {
+                    std::cout << "PLY     : " << ply_file
+                            << "  (frame " << best_frame_idx << ")\n"
+                            << "IMU     : " << imu_file << "\n";
+                } else {
+                    std::cout << "PLY     : (skipped — no depth frame captured)\n";
                 }
             }
-
-            draw_detections(color_bgr, detections); //draw each detection on colour frame
-
-            // Overlay unique-ID list in top-left corner
-            cv::putText(color_bgr,
-                        "Unique IDs seen: " + std::to_string(seen_ids.size()),
-                        cv::Point(10, 28),
-                        cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 220, 255), 2);
-            int y = 58;
-            for (int id : seen_ids) {
-                cv::putText(color_bgr, "  " + std::to_string(id),
-                            cv::Point(10, y),
-                            cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0, 220, 255), 1);
-                y += 22;
-            }
-
-            cv::imshow("AprilTag ID scanner (36h11)", color_bgr); //display the colour frame
-            if (cv::waitKey(1) == 'q') break;
-
-        // ─────────────────────────────────────────────────────────────────
-        } else if (test_mode) {
-            // ── Test mode loop: RGB only ──────────────────────────────────────
-            rs2::video_frame color_frame = frames.get_color_frame(); //get colour frame from realsense
-            if (!color_frame) continue;
-
-            cv::Mat color_bgr = to_bgr(color_frame); 
-            cv::Mat gray; 
-            cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY);  //convert to gray for april tag detection
-
-            auto detections = detect_markers(gray);
-            draw_detections(color_bgr, detections); //detect tags and draw onto colour frame
-
-            video_writer.write(color_bgr); //write the frame to the stored video file
-
-            if (!detections.empty()) { //log each detection and its time?
-                double ts_ms = std::chrono::duration<double, std::milli>(
-                    std::chrono::steady_clock::now() - t_start).count();
-                log_detections(csv, frame_count, ts_ms, detections, rs2::frame{});
-            }
-
-            cv::imshow("RGB + markers (test)", color_bgr); //displa the frame
-            if (cv::waitKey(1) == 'q') break;
-
-        // ─────────────────────────────────────────────────────────────────
-        } else {
-            // ── Normal mode loop ──────────────────────────────────────────────
-            if (auto a = frames.first_or_default(RS2_STREAM_ACCEL))
-                last_accel = a.as<rs2::motion_frame>().get_motion_data(); //get accelerometer date from frame
-            if (auto g = frames.first_or_default(RS2_STREAM_GYRO)) 
-                last_gyro  = g.as<rs2::motion_frame>().get_motion_data(); //get gyro data from frame
-
-            frames = align_to_color.process(frames); // align the depth pixels to colour?
-            rs2::depth_frame raw_depth = frames.get_depth_frame(); //get depth frame
-            if (!raw_depth) continue;
-
-            rs2::depth_frame filtered   = filters.process(raw_depth);  //filter depth
-            rs2::video_frame color_frame = frames.get_color_frame();  //get colour frame
-            cv::Mat          color_bgr  = to_bgr(color_frame);
-            cv::Mat          depth_bgr  = depth_to_mat(colorizer.colorize(filtered)); //convert both colour and depth to bgr format
-
-            double ts_ms = std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - t_start).count(); // elapsed time?
-
-            // ── Marker detection ─────────────────────────────────────────────
-            cv::Mat gray;
-            cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY); //convert to gray for detection
-
-            cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
-            clahe->apply(gray,gray); //Applied CLAHE after gray conversion to reduce dynamic range of image 
-
-            auto detections = detect_all_markers(gray); //detect tags and draw on colour frame
-            draw_detections(color_bgr, detections);
-
-            if (!detections.empty())
-                log_detections(csv, frame_count, ts_ms, detections, filtered);
-            // ─────────────────────────────────────────────────────────────────
-
-            show_frames(color_bgr, depth_bgr); //show both colour and depth frames
-            if (cv::waitKey(1) == 'q') break;
-
-            // Depth stats
-            double sum = 0.0; int valid = 0;
-            const int w = filtered.get_width(), h = filtered.get_height();
-            for (int y = 0; y < h; ++y)
-                for (int x = 0; x < w; ++x) {
-                    float d = filtered.get_distance(x, y);
-                    if (d > 0.0f) { sum += d; ++valid; }
-                } //get depth stats for which is the best frame
-
-            // Best-frame selection: most valid depth pixels == fewest holes
-            if (valid > best_valid_pixels) {
-                best_valid_pixels = valid;
-                best_depth        = filtered;
-                best_color        = color_frame;
-                best_accel        = last_accel;
-                best_gyro         = last_gyro;
-                best_frame_idx    = frame_count;
-                best_ts_ms        = ts_ms;
-            }
-
-            if (frame_count % 5 == 0) { //display stats for every 5th frame
-                double elapsed = std::chrono::duration<double>(
-                    std::chrono::steady_clock::now() - t_start).count();
-                print_stats(frame_count, elapsed, valid > 0 ? sum / valid : 0.0,
-                            last_accel, last_gyro);
-            }
-            // ─────────────────────────────────────────────────────────────────
         }
+        frame_count=0;
 
-        ++frame_count;
-    } //end while loop
-
-    ctx.pipe.stop();
-    if (test_mode) video_writer.release();
-
-    // ── Export best frame (most valid depth pixels = fewest holes) ────────────
-    if (capture_best && best_valid_pixels >= 0) {
-        pc.map_to(best_color);
-        rs2::points points = pc.calculate(best_depth);
-        points.export_to_ply(ply_file, best_color);
-        write_imu_csv(imu_file, best_frame_idx, best_ts_ms, best_accel, best_gyro);
-    }
-    // ─────────────────────────────────────────────────────────────────────────
-
-    double elapsed = std::chrono::duration<double>(
-        std::chrono::steady_clock::now() - t_start).count();
-    std::cout << "\n" << std::string(60, '-') << "\n"
-              << "Frames  : " << frame_count << "\n"
-              << "Duration: " << std::fixed << std::setprecision(2) << elapsed << "s\n";
-
-    if (id_mode) {
-        std::cout << "Unique IDs detected (" << seen_ids.size() << "): ";
-        for (int id : seen_ids) std::cout << id << " ";
-        std::cout << "\n";
-    } else {
-        std::cout << "CSV     : " << csv_file << "\n";
-        if (test_mode) {
-            std::cout << "Video   : " << vid_file << "\n";
-        } else {
-            if (!output_file.empty())
-                std::cout << "Bag     : " << output_file << "\n";
-            if (best_valid_pixels >= 0) {
-                std::cout << "PLY     : " << ply_file
-                          << "  (frame " << best_frame_idx << ")\n"
-                          << "IMU     : " << imu_file << "\n";
-            } else {
-                std::cout << "PLY     : (skipped — no depth frame captured)\n";
-            }
+        angle += step;
+    
+        if (repetition >= (angle_limit/step + 1) && !flipped)
+        {
+            angle = 10;
+            side = -1;
         }
+        serial.setCameraAngle(read_buf,angle*side);
+        printf("Received message: %s\n", read_buf);
+       
     }
+
 
     return 0;
 }
