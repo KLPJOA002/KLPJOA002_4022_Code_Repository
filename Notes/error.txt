@@ -1,0 +1,32 @@
+aru@ARU-ASUS15:~/Joab$ ./run rs_marker -a 30 -s 10 -n 15 -D ./Recordings
+Serial Port: 4
+Connection Established at /dev/ttyACM0
+Beginning loop now
+Number of iterations = 7
+Iteration 0
+Session : ./Recordings/20260821_155902_a0
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth 848x480 | Color 848x480 | Accel | Gyro
+Record  : ./Recordings/20260821_155902_a0/20260821_155902_a0.bag
+CSV     : ./Recordings/20260821_155902_a0/20260821_155902_a0_detections.csv
+PLY     : ./Recordings/20260821_155902_a0/20260821_155902_a0_0.ply  (best frame — least holes)
+IMU     : ./Recordings/20260821_155902_a0/imu_0.csv
+Frames  : 15
+------------------------------------------------------------
+Received message: H0000.0
+
+QSocketNotifier: Can only be used with threads started with QThread
+frames:     10  fps:   4.6  depth:  3.286m  accel: [0.07,-0.58,9.68]  gyro: [-0.01,-0.00,-0.01]     
+------------------------------------------------------------
+Frames  : 15
+Duration: 4.25s
+CSV     : ./Recordings/20260821_155902_a0/20260821_155902_a0_detections.csv
+Bag     : ./Recordings/20260821_155902_a0/20260821_155902_a0.bag
+PLY     : ./Recordings/20260821_155902_a0/20260821_155902_a0_0.ply  (frame 14)
+IMU     : ./Recordings/20260821_155902_a0/imu_0.csv
+Received message: S0010.0
+
+Iteration 1
+Session : ./Recordings/20260821_155902_a10
+RealSense error: get_xu(ctrl=1) failed! Last Error: Device or resource busy
+

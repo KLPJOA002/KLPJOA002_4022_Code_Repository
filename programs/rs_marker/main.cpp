@@ -328,16 +328,18 @@ static std::string timestamp_str()
 
 // Creates <parent>/<YYYYMMDD_HHMMSS>/ and returns the session directory path.
 // Creates <parent> first if it doesn't exist.
-static std::string make_session_dir(const std::string& parent)
+static std::string make_session_dir(const std::string& parent, const std::string& name)
 {
     mkdir(parent.c_str(), 0755);  // no-op if already exists
-    std::string dir = parent + "/" + timestamp_str();
+    std::string dir = parent + "/" + name;
     if (mkdir(dir.c_str(), 0755) != 0) {
-        std::cerr << "Failed to create session directory: " << dir << "\n";
+        std::cerr << "Failed to create session directory: " << dir
+                   << " (" << std::strerror(errno) << ")\n";
         std::exit(1);
     }
     return dir;
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -400,14 +402,14 @@ int main(int argc, char* argv[])
         else { std::cerr << "Unknown argument: " << arg << "\n"; print_usage(argv[0]); return 1; }
     }
 
-    if (angle>=60)
+    if (angle_limit>=60)
     {
         printf("Input angle too large, set to 60.\n");
         angle = 60;
     }
 
     //declare the time of the session
-    //const std::string run_ts = timestamp_str();
+    const std::string run_ts = timestamp_str();
 
     if (step<=0) step = 1;
     //start global loop here?
@@ -420,15 +422,16 @@ int main(int argc, char* argv[])
         if (id_mode && test_mode) {
             std::cerr << "Error: -id and -test cannot be used together.\n"; return 1;
         }
-        if (!output_dir.empty() && !output_file.empty()) {
-            std::cerr << "Error: -o and -D cannot be used together.\n"; return 1;
-        }
+        // if (!output_dir.empty() && !output_file.empty()) {
+        //     std::cerr << "Error: -o and -D cannot be used together.\n"; return 1;
+        // }
         if (!output_dir.empty()) {
-            std::string session_dir = make_session_dir(output_dir);
-            std::string ts_name     = session_dir.substr(session_dir.rfind('/') + 1);
-            output_file = session_dir + "/" + ts_name +std::to_string(angle*side)+ ".bag";
+            std::string session_name = run_ts + "_a" + std::to_string(angle*side);
+            std::string session_dir  = make_session_dir(output_dir, session_name);
+            output_file = session_dir + "/" + session_name + ".bag";
             std::cout << "Session : " << session_dir << "\n";
         }
+
 
         std::signal(SIGINT,  signal_handler);
         std::signal(SIGTERM, signal_handler);
@@ -720,6 +723,7 @@ int main(int argc, char* argv[])
         {
             angle = 10;
             side = -1;
+            flipped = true;
         }
         serial.setCameraAngle(read_buf,angle*side);
         printf("Received message: %s\n", read_buf);
