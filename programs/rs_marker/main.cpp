@@ -13,6 +13,7 @@
 #include <set>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <thread>
 #include "mountSerial.h"
 
 static std::atomic<bool> g_running{true};
@@ -688,6 +689,8 @@ int main(int argc, char* argv[])
         ctx.pipe.stop();
         if (test_mode) video_writer.release();
 
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // let the device release before restart
+
         // ── Export best frame (most valid depth pixels = fewest holes) ────────────
         if (capture_best && best_valid_pixels >= 0) {
             pc.map_to(best_color);
@@ -736,7 +739,7 @@ int main(int argc, char* argv[])
         serial.setCameraAngle(read_buf,angle*side);
         printf("Received message: %s\n", read_buf);
 
-        std::chrono::milliseconds(500);
+        //std::chrono::milliseconds(1000);
        
     }
 
