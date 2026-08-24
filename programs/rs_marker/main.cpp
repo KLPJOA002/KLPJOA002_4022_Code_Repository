@@ -46,7 +46,7 @@ struct DepthFilters {
         spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f); //threshold for disable low
         spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.f); // filter magnitude of 1
 
-        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.6f); //Set temporal filter to apply long filter windows
+        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.06f); //Set temporal filter to apply long filter windows
         temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 100.f); //set the delta threshold high to avoid disabbling on smal temporal changes
         temporal.set_option(RS2_OPTION_HOLES_FILL, 1.f); //select pixel only if valid in the past 8 frames
 
@@ -402,6 +402,10 @@ int main(int argc, char* argv[])
         else { std::cerr << "Unknown argument: " << arg << "\n"; print_usage(argv[0]); return 1; }
     }
 
+    if (id_mode && test_mode) {
+        std::cerr << "Error: -id and -test cannot be used together.\n"; return 1;
+    }
+
     if (angle_limit>=60)
     {
         printf("Input angle too large, set to 60.\n");
@@ -411,7 +415,17 @@ int main(int argc, char* argv[])
     //declare the time of the session
     const std::string run_ts = timestamp_str();
 
-    if (step<=0) step = 1;
+    //Set step size to 1 if entered value is less than 0
+    if (step<=0) step = 1; 
+
+    //Return the mount to the home position
+    serial.homeCamera(read_buf); 
+    printf("Received message: %s\n", read_buf);
+
+    std::signal(SIGINT,  signal_handler);
+    std::signal(SIGTERM, signal_handler);
+    PipelineCtx ctx;
+
     //start global loop here?
     printf("Beginning loop now\n");
     printf("Number of iterations = %d\n",(2*(angle_limit/step)+1));
@@ -419,9 +433,7 @@ int main(int argc, char* argv[])
     {
         printf("Iteration %d\n",repetition);
 
-        if (id_mode && test_mode) {
-            std::cerr << "Error: -id and -test cannot be used together.\n"; return 1;
-        }
+        
         // if (!output_dir.empty() && !output_file.empty()) {
         //     std::cerr << "Error: -o and -D cannot be used together.\n"; return 1;
         // }
@@ -432,17 +444,14 @@ int main(int argc, char* argv[])
             std::cout << "Session : " << session_dir << "\n";
         }
 
-
-        std::signal(SIGINT,  signal_handler);
-        std::signal(SIGTERM, signal_handler);
-
-        PipelineCtx ctx;
+        
         try {
             ctx = start_pipeline((test_mode || id_mode) ? "" : output_file,
                                 test_mode || id_mode);
         } catch (const rs2::error& e) {
             std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
         }
+
 
         std::string   csv_file = id_mode ? "" : csv_path(test_mode ? "" : output_file);
         std::ofstream csv;
@@ -528,8 +537,6 @@ int main(int argc, char* argv[])
         double           best_ts_ms        = 0.0;
         int              best_valid_pixels = -1;
 
-        serial.homeCamera(read_buf);
-        printf("Received message: %s\n", read_buf);
 
         while (g_running) {
             if (duration_sec > 0) {
@@ -631,11 +638,12 @@ int main(int argc, char* argv[])
                 cv::Mat gray;
                 cv::cvtColor(color_bgr, gray, cv::COLOR_BGR2GRAY); //convert to gray for detection
 
-                cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
-                clahe->apply(gray,gray); //Applied CLAHE after gray conversion to reduce dynamic range of image 
+                //cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
+                //clahe->apply(gray,gray); //Applied CLAHE after gray conversion to reduce dynamic range of image 
 
                 auto detections = detect_all_markers(gray); //detect tags and draw on colour frame
                 draw_detections(color_bgr, detections);
+                draw_detections(gray,detections);
 
                 if (!detections.empty())
                     log_detections(csv, frame_count, ts_ms, detections, filtered);
@@ -719,7 +727,7 @@ int main(int argc, char* argv[])
 
         angle += step;
     
-        if (repetition >= (angle_limit/step + 1) && !flipped)
+        if (repetition >= (angle_limit/step) && !flipped)
         {
             angle = 10;
             side = -1;
@@ -727,9 +735,16 @@ int main(int argc, char* argv[])
         }
         serial.setCameraAngle(read_buf,angle*side);
         printf("Received message: %s\n", read_buf);
+
+        std::chrono::milliseconds(500);
        
     }
 
+    
+
+    //Return the mount to the home position
+    serial.homeCamera(read_buf); 
+    printf("Received message: %s\n", read_buf);
 
     return 0;
 }
