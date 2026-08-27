@@ -56,12 +56,12 @@ struct DepthFilters {
 
     rs2::depth_frame process(rs2::depth_frame depth)
     {
-        //depth = decimation.process(depth);
-        depth = to_disparity.process(depth);
-        depth = spatial.process(depth);
-        depth = temporal.process(depth);
-        depth = to_depth.process(depth);
-        depth = hole_fill.process(depth);
+        //  depth = decimation.process(depth);
+        // depth = to_disparity.process(depth);
+        // depth = spatial.process(depth);
+        // depth = temporal.process(depth);
+        // depth = to_depth.process(depth);
+        // depth = hole_fill.process(depth);
         return depth.as<rs2::depth_frame>();
     }
 };
@@ -175,7 +175,7 @@ static std::string ply_path(const std::string& bag, int angle, int side)
 {
     if (bag.empty()) return "best_frame.ply";
     auto dot = bag.rfind('.');
-    return (dot == std::string::npos ? bag : bag.substr(0, dot)) +"_"+std::to_string(angle*side)+ ".ply";
+    return (dot == std::string::npos ? bag : bag.substr(0, dot))+ ".ply";
 }
 
 // Directory portion of a path, or "." if there is none.
@@ -372,14 +372,14 @@ int main(int argc, char* argv[])
     bool        test_mode     = false;
     bool        id_mode       = false;
 
-    mountSerial serial;
+    std::unique_ptr<mountSerial> serial;
     char read_buf[30];
     int angle = 0;
     int angle_limit = 0;
     int step = 10;
     int side = 1;
     bool flipped = false;
-    //int repetition = 1;
+    bool Enable_Tilt = true;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -399,6 +399,8 @@ int main(int argc, char* argv[])
             test_mode = true;
         else if (arg == "-id" || arg == "--id")
             id_mode = true;
+        else if (arg == "-noTilt" || arg == "--noTilt")
+            Enable_Tilt = false;
         else if (arg == "-h" || arg == "--help") { print_usage(argv[0]); return 0; }
         else { std::cerr << "Unknown argument: " << arg << "\n"; print_usage(argv[0]); return 1; }
     }
@@ -413,15 +415,25 @@ int main(int argc, char* argv[])
         angle = 60;
     }
 
+    if (Enable_Tilt) {
+        serial = std::make_unique<mountSerial>();
+    }
+    else angle_limit = 0;
+
     //declare the time of the session
     const std::string run_ts = timestamp_str();
+
+    //make a folder for each session
+    output_dir = output_dir + "/" + run_ts;
 
     //Set step size to 1 if entered value is less than 0
     if (step<=0) step = 1; 
 
-    //Return the mount to the home position
-    serial.homeCamera(read_buf); 
-    printf("Received message: %s\n", read_buf);
+    if (Enable_Tilt){
+        //Return the mount to the home position
+        serial->homeCamera(read_buf); 
+        printf("Received message: %s\n", read_buf);
+    }
 
     std::signal(SIGINT,  signal_handler);
     std::signal(SIGTERM, signal_handler);
@@ -467,7 +479,7 @@ int main(int argc, char* argv[])
         bool        capture_best = !test_mode && !id_mode;
         std::string ply_file     = capture_best ? ply_path(output_file,angle,side) : "";
         std::string imu_file     = capture_best
-            ? (output_file.empty() ? "imu_"+std::to_string(angle*side)+".csv" : dir_of(output_file) + "/imu_"+std::to_string(angle*side)+".csv")
+            ? (output_file.empty() ? "imu_a"+std::to_string(angle*side)+".csv" : dir_of(output_file) + "/imu_a"+std::to_string(angle*side)+".csv")
             : "";
 
         // ── Test mode: open video writer ──────────────────────────────────────────
@@ -727,18 +739,20 @@ int main(int argc, char* argv[])
             }
         }
         frame_count=0;
+        
+        if(Enable_Tilt){
 
-        angle += step;
-    
-        if (repetition >= (angle_limit/step) && !flipped)
-        {
-            angle = 10;
-            side = -1;
-            flipped = true;
+            angle += step;
+        
+            if (repetition >= (angle_limit/step) && !flipped)
+            {
+                angle = 10;
+                side = -1;
+                flipped = true;
+            }
+            serial->setCameraAngle(read_buf,angle*side);
+            printf("Received message: %s\n", read_buf);
         }
-        serial.setCameraAngle(read_buf,angle*side);
-        printf("Received message: %s\n", read_buf);
-
         //std::chrono::milliseconds(1000);
        
     }
@@ -746,8 +760,9 @@ int main(int argc, char* argv[])
     
 
     //Return the mount to the home position
-    serial.homeCamera(read_buf); 
-    printf("Received message: %s\n", read_buf);
-
+    if(Enable_Tilt){
+        serial->homeCamera(read_buf); 
+        printf("Received message: %s\n", read_buf);
+    }
     return 0;
 }
