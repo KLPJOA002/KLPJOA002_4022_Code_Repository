@@ -96,37 +96,10 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
     if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
         depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
 
+    if (depth_sensor.supports(RS2_OPTION_THERMAL_COMPENSATION))
+        depth_sensor.set_option(RS2_OPTION_THERMAL_COMPENSATION, 0);
     return ctx;
 }
-
-//New pipeline starts once for entire tilt sequence, therefore change this function to get progile
-// static rs2::pipeline_profile start_pipeline(rs2::pipeline& pipe,
-//                                              const std::string& output_file,
-//                                              bool test_mode) 
-// {
-//     rs2::config cfg;
-//     if (test_mode) {
-//         cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8, 30);
-//     } else {
-//         cfg.enable_stream(RS2_STREAM_DEPTH, 0, 1280, 720, RS2_FORMAT_Z16,        30);
-//         cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8,       30);
-//         cfg.enable_stream(RS2_STREAM_ACCEL,             RS2_FORMAT_MOTION_XYZ32F);
-//         cfg.enable_stream(RS2_STREAM_GYRO,              RS2_FORMAT_MOTION_XYZ32F);
-//         if (!output_file.empty())
-//             cfg.enable_record_to_file(output_file);
-//     }
-//     rs2::pipeline_profile profile = pipe.start(cfg);//(re)start the SAME pipeline with this iteration's cfg
- 
-//     auto depth_sensor = profile.get_device().first<rs2::depth_sensor>();
-//     if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
-//         depth_sensor.set_option(RS2_OPTION_VISUAL_PRESET,
-//                                 RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
- 
-//     if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
-//         depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
- 
-//     return profile;
-// }
 
 
 static PipelineCtx start_pipeline_retry(const std::string& output_file, bool test_mode,
@@ -814,6 +787,7 @@ int main(int argc, char* argv[])
     //Return the mount to the home position
     printf("Returning to home position");
     if(Enable_Tilt){
+        serial->homeCamera(read_buf); 
         serial->homeCamera(read_buf); 
         printf("Received message: %s\n", read_buf);
     }
