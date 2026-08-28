@@ -56,12 +56,12 @@ struct DepthFilters {
 
     rs2::depth_frame process(rs2::depth_frame depth)
     {
-        //  depth = decimation.process(depth);
-        // depth = to_disparity.process(depth);
-        // depth = spatial.process(depth);
-        // depth = temporal.process(depth);
-        // depth = to_depth.process(depth);
-        // depth = hole_fill.process(depth);
+        // depth = decimation.process(depth);
+        depth = to_disparity.process(depth);
+        depth = spatial.process(depth);
+        depth = temporal.process(depth);
+        depth = to_depth.process(depth);
+        depth = hole_fill.process(depth);
         return depth.as<rs2::depth_frame>();
     }
 };
@@ -97,6 +97,51 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
         depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
 
     return ctx;
+}
+
+//New pipeline starts once for entire tilt sequence, therefore change this function to get progile
+// static rs2::pipeline_profile start_pipeline(rs2::pipeline& pipe,
+//                                              const std::string& output_file,
+//                                              bool test_mode) 
+// {
+//     rs2::config cfg;
+//     if (test_mode) {
+//         cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8, 30);
+//     } else {
+//         cfg.enable_stream(RS2_STREAM_DEPTH, 0, 1280, 720, RS2_FORMAT_Z16,        30);
+//         cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8,       30);
+//         cfg.enable_stream(RS2_STREAM_ACCEL,             RS2_FORMAT_MOTION_XYZ32F);
+//         cfg.enable_stream(RS2_STREAM_GYRO,              RS2_FORMAT_MOTION_XYZ32F);
+//         if (!output_file.empty())
+//             cfg.enable_record_to_file(output_file);
+//     }
+//     rs2::pipeline_profile profile = pipe.start(cfg);//(re)start the SAME pipeline with this iteration's cfg
+ 
+//     auto depth_sensor = profile.get_device().first<rs2::depth_sensor>();
+//     if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
+//         depth_sensor.set_option(RS2_OPTION_VISUAL_PRESET,
+//                                 RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
+ 
+//     if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
+//         depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
+ 
+//     return profile;
+// }
+
+
+static PipelineCtx start_pipeline_retry(const std::string& output_file, bool test_mode,
+                                         int max_attempts = 5)
+{
+    for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+        try {
+            return start_pipeline(output_file, test_mode);
+        } catch (const rs2::error& e) {
+            std::cerr << "start_pipeline attempt " << attempt << " failed: "
+                      << e.what() << " — retrying...\n";
+            std::this_thread::sleep_for(std::chrono::milliseconds(500 * attempt));
+        }
+    }
+    throw std::runtime_error("Failed to start RealSense pipeline after retries");
 }
 
 // RS2 colour frame → cloned BGR Mat (safe after frame goes out of scope)
@@ -409,10 +454,10 @@ int main(int argc, char* argv[])
         std::cerr << "Error: -id and -test cannot be used together.\n"; return 1;
     }
 
-    if (angle_limit>=60)
+    if (angle_limit>60)
     {
         printf("Input angle too large, set to 60.\n");
-        angle = 60;
+        angle_limit = 60;
     }
 
     if (Enable_Tilt) {
@@ -439,6 +484,12 @@ int main(int argc, char* argv[])
     std::signal(SIGTERM, signal_handler);
     PipelineCtx ctx;
 
+    // std::signal(SIGINT,  signal_handler);
+    // std::signal(SIGTERM, signal_handler);
+    // rs2::pipeline         pipe;     // created ONCE, reused every iteration via stop()/start()
+    // rs2::pipeline_profile profile;
+
+
     //start global loop here?
     printf("Beginning loop now\n");
     printf("Number of iterations = %d\n",(2*(angle_limit/step)+1));
@@ -458,12 +509,13 @@ int main(int argc, char* argv[])
         }
 
         
-        try {
-            ctx = start_pipeline((test_mode || id_mode) ? "" : output_file,
-                                test_mode || id_mode);
-        } catch (const rs2::error& e) {
-            std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
-        }
+        // try {
+        //     ctx = start_pipeline((test_mode || id_mode) ? "" : output_file,
+        //                         test_mode || id_mode);
+        // } catch (const rs2::error& e) {
+        //     std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
+        // }
+        ctx = start_pipeline_retry((test_mode || id_mode) ? "" : output_file, test_mode || id_mode,5);
 
 
         std::string   csv_file = id_mode ? "" : csv_path(test_mode ? "" : output_file);
@@ -760,6 +812,7 @@ int main(int argc, char* argv[])
     
 
     //Return the mount to the home position
+    printf("Returning to home position");
     if(Enable_Tilt){
         serial->homeCamera(read_buf); 
         printf("Received message: %s\n", read_buf);
