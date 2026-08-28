@@ -72,38 +72,9 @@ struct PipelineCtx {
     rs2::pipeline_profile profile;
 };
 
-static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode)
-{
-    PipelineCtx ctx;
-    rs2::config cfg;
-    if (test_mode) {
-        cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8, 30);
-    } else {
-        cfg.enable_stream(RS2_STREAM_DEPTH, 0, 1280, 720, RS2_FORMAT_Z16,        30);
-        cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8,       30);
-        cfg.enable_stream(RS2_STREAM_ACCEL,             RS2_FORMAT_MOTION_XYZ32F);
-        cfg.enable_stream(RS2_STREAM_GYRO,              RS2_FORMAT_MOTION_XYZ32F);
-        if (!output_file.empty())
-            cfg.enable_record_to_file(output_file);
-    }
-    ctx.profile = ctx.pipe.start(cfg);//start the pipeline with the cfg configuration
-
-    auto depth_sensor = ctx.profile.get_device().first<rs2::depth_sensor>();
-    if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
-        depth_sensor.set_option(RS2_OPTION_VISUAL_PRESET,
-                                RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
-
-    if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
-        depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
-
-    return ctx;
-}
-
-//New pipeline starts once for entire tilt sequence, therefore change this function to get progile
-// static rs2::pipeline_profile start_pipeline(rs2::pipeline& pipe,
-//                                              const std::string& output_file,
-//                                              bool test_mode) 
+// static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode)
 // {
+//     PipelineCtx ctx;
 //     rs2::config cfg;
 //     if (test_mode) {
 //         cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8, 30);
@@ -115,34 +86,88 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
 //         if (!output_file.empty())
 //             cfg.enable_record_to_file(output_file);
 //     }
-//     rs2::pipeline_profile profile = pipe.start(cfg);//(re)start the SAME pipeline with this iteration's cfg
- 
-//     auto depth_sensor = profile.get_device().first<rs2::depth_sensor>();
+//     ctx.profile = ctx.pipe.start(cfg);//start the pipeline with the cfg configuration
+
+//     auto depth_sensor = ctx.profile.get_device().first<rs2::depth_sensor>();
 //     if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
 //         depth_sensor.set_option(RS2_OPTION_VISUAL_PRESET,
 //                                 RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
- 
+
 //     if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
 //         depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
- 
-//     return profile;
+
+//     return ctx;
 // }
 
+// New pipeline starts once for entire tilt sequence, therefore change this function to get progile
+static rs2::pipeline_profile start_pipeline(rs2::pipeline& pipe,
+                                             const std::string& output_file,
+                                             bool test_mode) 
+{
+    rs2::config cfg;
+    if (test_mode) {
+        cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8, 30);
+    } else {
+        cfg.enable_stream(RS2_STREAM_DEPTH, 0, 1280, 720, RS2_FORMAT_Z16,        30);
+        cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8,       30);
+        cfg.enable_stream(RS2_STREAM_ACCEL,             RS2_FORMAT_MOTION_XYZ32F);
+        cfg.enable_stream(RS2_STREAM_GYRO,              RS2_FORMAT_MOTION_XYZ32F);
+        if (!output_file.empty())
+            cfg.enable_record_to_file(output_file);
+    }
+    rs2::pipeline_profile profile = pipe.start(cfg);//(re)start the SAME pipeline with this iteration's cfg
+ 
+    auto depth_sensor = profile.get_device().first<rs2::depth_sensor>();
+    if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
+        depth_sensor.set_option(RS2_OPTION_VISUAL_PRESET,
+                                RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
+ 
+    if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
+        depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
+    
+    if (depth_sensor.supports(RS2_OPTION_THERMAL_COMPENSATION))
+        depth_sensor.set_option(RS2_OPTION_THERMAL_COMPENSATION,0);
+ 
+    return profile;
+}
 
-static PipelineCtx start_pipeline_retry(const std::string& output_file, bool test_mode,
-                                         int max_attempts = 5)
+
+// static PipelineCtx start_pipeline_retry(const std::string& output_file, bool test_mode,
+//                                          int max_attempts = 5)
+// {
+//     for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+//         try {
+//             return start_pipeline(output_file, test_mode);
+//         } catch (const rs2::error& e) {
+//             std::cerr << "start_pipeline attempt " << attempt << " failed: "
+//                       << e.what() << " — retrying...\n";
+//             std::this_thread::sleep_for(std::chrono::milliseconds(500 * attempt));
+//         }
+//     }
+//     throw std::runtime_error("Failed to start RealSense pipeline after retries");
+// }
+
+static rs2::pipeline_profile start_pipeline_retry(rs2::pipeline& pipe,
+                                                   const std::string& output_file, bool test_mode,
+                                                   int max_attempts = 5)
 {
     for (int attempt = 1; attempt <= max_attempts; ++attempt) {
         try {
-            return start_pipeline(output_file, test_mode);
+            return start_pipeline(pipe, output_file, test_mode);
         } catch (const rs2::error& e) {
             std::cerr << "start_pipeline attempt " << attempt << " failed: "
                       << e.what() << " — retrying...\n";
-            std::this_thread::sleep_for(std::chrono::milliseconds(500 * attempt));
+                      
+            try {
+                pipe.stop();
+            } catch (...) {
+                // Ignore error if pipeline was already inactive
+            }
         }
     }
     throw std::runtime_error("Failed to start RealSense pipeline after retries");
 }
+
 
 // RS2 colour frame → cloned BGR Mat (safe after frame goes out of scope)
 static cv::Mat to_bgr(const rs2::video_frame& f)
@@ -480,14 +505,14 @@ int main(int argc, char* argv[])
         printf("Received message: %s\n", read_buf);
     }
 
-    std::signal(SIGINT,  signal_handler);
-    std::signal(SIGTERM, signal_handler);
-    PipelineCtx ctx;
-
     // std::signal(SIGINT,  signal_handler);
     // std::signal(SIGTERM, signal_handler);
-    // rs2::pipeline         pipe;     // created ONCE, reused every iteration via stop()/start()
-    // rs2::pipeline_profile profile;
+    // PipelineCtx ctx;
+
+    std::signal(SIGINT,  signal_handler);
+    std::signal(SIGTERM, signal_handler);
+    rs2::pipeline         pipe;     // created ONCE, reused every iteration via stop()/start()
+    rs2::pipeline_profile profile;
 
 
     //start global loop here?
@@ -515,7 +540,15 @@ int main(int argc, char* argv[])
         // } catch (const rs2::error& e) {
         //     std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
         // }
-        ctx = start_pipeline_retry((test_mode || id_mode) ? "" : output_file, test_mode || id_mode,5);
+
+        // ctx = start_pipeline_retry((test_mode || id_mode) ? "" : output_file, test_mode || id_mode,5);
+
+        try {
+            profile = start_pipeline_retry(pipe, (test_mode || id_mode) ? "" : output_file,test_mode || id_mode, 5);
+            //profile = start_pipeline(pipe, (test_mode || id_mode) ? "" : output_file,test_mode || id_mode);
+        } catch (const std::exception& e) {
+            std::cerr << "Failed to start pipeline: " << e.what() << "\n"; return 1;
+        }
 
 
         std::string   csv_file = id_mode ? "" : csv_path(test_mode ? "" : output_file);
@@ -613,7 +646,7 @@ int main(int argc, char* argv[])
 
             // rs2::frameset frames;
             // if (!ctx.pipe.poll_for_frames(&frames)) continue;
-            rs2::frameset frames = ctx.pipe.wait_for_frames();
+            rs2::frameset frames = pipe.wait_for_frames();
 
             if (id_mode) {
                 // ── ID mode loop: detect all 36h11 tags, log unique IDs ───────────
@@ -750,18 +783,23 @@ int main(int argc, char* argv[])
             ++frame_count;
         } //end while loop
 
-        ctx.pipe.stop();
-        if (test_mode) video_writer.release();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // let the device release before restart
-
-        // ── Export best frame (most valid depth pixels = fewest holes) ────────────
         if (capture_best && best_valid_pixels >= 0) {
             pc.map_to(best_color);
             rs2::points points = pc.calculate(best_depth);
             points.export_to_ply(ply_file, best_color);
             write_imu_csv(imu_file, best_frame_idx, best_ts_ms, best_accel, best_gyro);
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // let the device release before restart
+       
+        pipe.stop();
+        if (test_mode) video_writer.release();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // let the device release before restart
+        // ── Export best frame (most valid depth pixels = fewest holes) ────────────
+        // best_depth = {};
+        // best_color = {};
+        
         // ─────────────────────────────────────────────────────────────────────────
 
         double elapsed = std::chrono::duration<double>(
@@ -812,8 +850,10 @@ int main(int argc, char* argv[])
     
 
     //Return the mount to the home position
-    printf("Returning to home position");
     if(Enable_Tilt){
+        printf("Returning to home position\n");
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        serial->homeCamera(read_buf); 
         serial->homeCamera(read_buf); 
         printf("Received message: %s\n", read_buf);
     }
