@@ -1,0 +1,3 @@
+/home/aru/Joab/Capture/More_Tools/Fuse/build/CMakeFiles/fuse_scans.dir
+/home/aru/Joab/Capture/More_Tools/Fuse/build/CMakeFiles/edit_cache.dir
+/home/aru/Joab/Capture/More_Tools/Fuse/build/CMakeFiles/rebuild_cache.dir

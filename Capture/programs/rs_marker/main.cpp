@@ -35,6 +35,7 @@ static void print_usage(const char* prog)
 // ── Depth post-processing ─────────────────────────────────────────────────────
 struct DepthFilters {
     rs2::decimation_filter   decimation;
+    rs2::threshold_filter    threshold;
     rs2::disparity_transform to_disparity{true};
     rs2::spatial_filter      spatial;
     rs2::temporal_filter     temporal;
@@ -43,6 +44,9 @@ struct DepthFilters {
 
     DepthFilters()
     {
+        threshold.set_option(RS2_OPTION_MIN_DISTANCE,0.4f);
+        threshold.set_option(RS2_OPTION_MAX_DISTANCE,0.7f);
+
         spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f); // Spatial filter over small history
         spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f); //threshold for disable low
         spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.f); // filter magnitude of 1
@@ -57,6 +61,7 @@ struct DepthFilters {
     rs2::depth_frame process(rs2::depth_frame depth)
     {
         // depth = decimation.process(depth);
+        depth = threshold.process(depth);
         depth = to_disparity.process(depth);
         depth = spatial.process(depth);
         depth = temporal.process(depth);
@@ -444,6 +449,7 @@ int main(int argc, char* argv[])
 
     //make a folder for each session
     output_dir = output_dir + "/" + run_ts;
+    const std::string session_root = output_dir;  // <session> — holds one folder per rotation
 
     //Set step size to 1 if entered value is less than 0
     if (step<=0) step = 1; 
@@ -464,23 +470,40 @@ int main(int argc, char* argv[])
     // rs2::pipeline_profile profile;
 
 
-    //start global loop here?
-    printf("Beginning loop now\n");
-    printf("Number of iterations = %d\n",(2*(angle_limit/step)+1));
-    for (int repetition = 0; repetition<(2*(angle_limit/step)+1);repetition++)
-    {
-        printf("Iteration %d\n",repetition);
+    int  rotation_index = 0;
+    bool keep_scanning  = true;
 
-        
-        // if (!output_dir.empty() && !output_file.empty()) {
-        //     std::cerr << "Error: -o and -D cannot be used together.\n"; return 1;
-        // }
+    while (keep_scanning && g_running)
+    {
+        // Reset the tilt sweep state for this rotation set
+        angle   = 0;
+        side    = 1;
+        flipped = false;
+
+        std::string rotation_name = run_ts + "_r" + std::to_string(rotation_index);
+        std::string rotation_dir;
         if (!output_dir.empty()) {
-            std::string session_name = run_ts + "_a" + std::to_string(angle*side);
-            std::string session_dir  = make_session_dir(output_dir, session_name);
-            output_file = session_dir + "/" + session_name + ".db3";
-            std::cout << "Session : " << session_dir << "\n";
+            rotation_dir = make_session_dir(session_root, rotation_name);
+            std::cout << "Rotation: " << rotation_dir << "\n";
         }
+
+        //start sweep loop here
+        printf("Beginning loop now\n");
+        printf("Number of iterations = %d\n",(2*(angle_limit/step)+1));
+        for (int repetition = 0; repetition<(2*(angle_limit/step)+1);repetition++)
+        {
+            printf("Iteration %d\n",repetition);
+
+
+            // if (!output_dir.empty() && !output_file.empty()) {
+            //     std::cerr << "Error: -o and -D cannot be used together.\n"; return 1;
+            // }
+            if (!output_dir.empty()) {
+                std::string session_name = rotation_name + "_a" + std::to_string(angle*side);
+                std::string session_dir  = make_session_dir(rotation_dir, session_name);
+                output_file = session_dir + "/" + session_name + ".db3";
+                std::cout << "Session : " << session_dir << "\n";
+            }
 
         
         // try {
@@ -740,7 +763,7 @@ int main(int argc, char* argv[])
         ctx.pipe.stop();
         if (test_mode) video_writer.release();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // let the device release before restart
+        //std::this_thread::sleep_for(std::chrono::milliseconds(200)); // let the device release before restart
 
         double elapsed = std::chrono::duration<double>(
             std::chrono::steady_clock::now() - t_start).count();
@@ -776,7 +799,7 @@ int main(int argc, char* argv[])
         
             if (repetition >= (angle_limit/step) && !flipped)
             {
-                angle = 10;
+                angle = step;
                 side = -1;
                 flipped = true;
             }
@@ -784,16 +807,37 @@ int main(int argc, char* argv[])
             printf("Received message: %s\n", read_buf);
         }
         //std::chrono::milliseconds(1000);
-       
-    }
 
-    
+        } //end sweep for loop
+
+        // Angle sweep for this rotation is done — return to home before asking
+        // the user to rotate the mount (rotation is changed manually).
+        if (Enable_Tilt) {
+            serial->homeCamera(read_buf);
+            serial->homeCamera(read_buf);
+            printf("Received message: %s\n", read_buf);
+        }
+
+        if (!g_running) break;
+
+        std::cout << "\n" << std::string(60, '-') << "\n"
+                  << "Completed rotation " << rotation_index << ".\n"
+                  << "Rotate the mount to the next position, then press Enter to "
+                     "continue scanning (or type q + Enter to finish): ";
+        std::string user_line;
+        std::getline(std::cin, user_line);
+        if (!user_line.empty() && (user_line[0] == 'q' || user_line[0] == 'Q')) {
+            keep_scanning = false;
+        } else {
+            rotation_index += 45;
+        }
+    } //end rotation while loop
 
     //Return the mount to the home position
     printf("Returning to home position");
     if(Enable_Tilt){
-        serial->homeCamera(read_buf); 
-        serial->homeCamera(read_buf); 
+        serial->homeCamera(read_buf);
+        serial->homeCamera(read_buf);
         printf("Received message: %s\n", read_buf);
     }
     return 0;

@@ -1,0 +1,25 @@
+# Rig geometry for point cloud fusion - edit and re-run, no rebuild needed.
+# Load with: ./fuse_scans --rig-config rig_config.example.txt --sessions ...
+#
+# Any of these can still be overridden per-run with the matching CLI flag
+# (--tilt-axis, --tilt-sign, --rotation-axis, --rotation-step-deg,
+# --rotation-sign) without editing this file.
+
+# --- Tilt (within a session, from each subfolder's "_a<deg>" name) ---
+tilt_axis = x
+tilt_sign = 1
+
+# --- Rotation (between sessions) ---
+# Axis your rig's rotation stage turns about.
+rotation_axis = z
+# Assumed degrees between consecutive sessions, in the order you pass them
+# on the command line - only used as a fallback for sessions whose folder
+# name doesn't itself contain a "_r<deg>" token.
+rotation_step_deg = 45
+rotation_sign = 1
+
+# How tilt and rotation compose. true: world = R_rotation * R_tilt (tilt
+# happens in the frame that then gets rotated - tilt head mounted on a
+# turntable). Flip to false if alignment quality is consistently poor with
+# these settings on, before assuming the angles themselves are wrong.
+compose_tilt_first = true
