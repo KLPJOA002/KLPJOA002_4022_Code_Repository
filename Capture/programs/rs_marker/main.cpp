@@ -149,16 +149,17 @@ static void show_frames(const cv::Mat& color, const cv::Mat& depth)
 }
 
 static void print_stats(long long frames, double elapsed,
-                        double depth_avg, rs2_vector accel, rs2_vector gyro)
+                        double depth_avg, rs2_vector accel, rs2_vector gyro, long holes)
 {
     std::cout << "\r"
               << "frames: "   << std::setw(6) << frames
               << "  fps: "    << std::fixed << std::setprecision(1)
                               << std::setw(5) << frames / elapsed
               << "  depth: "  << std::setprecision(3) << std::setw(6) << depth_avg << "m"
-              << "  accel: [" << std::setprecision(2)
-                              << accel.x << "," << accel.y << "," << accel.z << "]"
-              << "  gyro: ["  << gyro.x  << "," << gyro.y  << "," << gyro.z  << "]"
+            //   << "  accel: [" << std::setprecision(2)
+            //                   << accel.x << "," << accel.y << "," << accel.z << "]"
+            //   << "  gyro: ["  << gyro.x  << "," << gyro.y  << "," << gyro.z  << "]"
+            << " Holes: " << holes
               << "     " << std::flush;
 }
 
@@ -477,7 +478,7 @@ int main(int argc, char* argv[])
         if (!output_dir.empty()) {
             std::string session_name = run_ts + "_a" + std::to_string(angle*side);
             std::string session_dir  = make_session_dir(output_dir, session_name);
-            output_file = session_dir + "/" + session_name + ".bag";
+            output_file = session_dir + "/" + session_name + ".db3";
             std::cout << "Session : " << session_dir << "\n";
         }
 
@@ -691,12 +692,13 @@ int main(int argc, char* argv[])
                 if (cv::waitKey(1) == 'q') break;
 
                 // Depth stats
-                double sum = 0.0; int valid = 0;
+                double sum = 0.0; int valid = 0; int holes = 0;
                 const int w = filtered.get_width(), h = filtered.get_height();
                 for (int y = 0; y < h; ++y)
                     for (int x = 0; x < w; ++x) {
                         float d = filtered.get_distance(x, y);
                         if (d > 0.0f) { sum += d; ++valid; }
+                        else {holes++;}
                     } //get depth stats for which is the best frame
 
                 // Best-frame selection: most valid depth pixels == fewest holes
@@ -714,7 +716,7 @@ int main(int argc, char* argv[])
                     double elapsed = std::chrono::duration<double>(
                         std::chrono::steady_clock::now() - t_start).count();
                     print_stats(frame_count, elapsed, valid > 0 ? sum / valid : 0.0,
-                                last_accel, last_gyro);
+                                last_accel, last_gyro, holes);
                 }
                 // ─────────────────────────────────────────────────────────────────
                 
@@ -723,19 +725,22 @@ int main(int argc, char* argv[])
             ++frame_count;
         } //end while loop
 
-        ctx.pipe.stop();
-        if (test_mode) video_writer.release();
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // let the device release before restart
-
         // ── Export best frame (most valid depth pixels = fewest holes) ────────────
         if (capture_best && best_valid_pixels >= 0) {
+            best_color.keep();
+            best_depth.keep();
+
             pc.map_to(best_color);
             rs2::points points = pc.calculate(best_depth);
             points.export_to_ply(ply_file, best_color);
             write_imu_csv(imu_file, best_frame_idx, best_ts_ms, best_accel, best_gyro);
         }
         // ─────────────────────────────────────────────────────────────────────────
+
+        ctx.pipe.stop();
+        if (test_mode) video_writer.release();
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // let the device release before restart
 
         double elapsed = std::chrono::duration<double>(
             std::chrono::steady_clock::now() - t_start).count();
