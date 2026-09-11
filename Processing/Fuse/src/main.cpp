@@ -105,6 +105,12 @@ void printUsage(const char* prog)
         "                           rotation step; trust the recorded angles instead\n"
         "  --no-roi             skip the per-scan crop box prompt in the viewer\n"
         "\n"
+        "Density:\n"
+        "  --scan-voxel <m>     spacing each scan is thinned to when loaded (default\n"
+        "                       0.003). This is the ceiling on output density: a finer\n"
+        "                       --fusion-cell cannot recover detail discarded here.\n"
+        "                       Lowering it costs memory and time roughly as 1/m^2\n"
+        "\n"
         "Fusion (how overlapping scans are combined):\n"
         "  --fusion-mode <m>    auto (default), heightfield, or volumetric\n"
         "  --fusion-voxel <m>   voxel size for volumetric fusion (default 0.002)\n"
@@ -176,6 +182,7 @@ int main(int argc, char** argv)
     ReconcileParams reconcile_params;
     std::optional<Eigen::Vector3f> tilt_pivot_override;
     std::optional<float> tilt_pivot_range;
+    std::optional<float> scan_voxel;
     bool list_only = false;
     std::string rig_config_path;
     std::vector<std::string> reverse_rotation_sessions;
@@ -268,6 +275,10 @@ int main(int argc, char** argv)
         else if (arg == "--no-imu-tilt")
         {
             use_imu_tilt = false;
+        }
+        else if (arg == "--scan-voxel" && i + 1 < argc)
+        {
+            scan_voxel = std::stof(argv[++i]);
         }
         else if (arg == "--fusion-mode" && i + 1 < argc)
         {
@@ -401,6 +412,19 @@ int main(int argc, char** argv)
     // don't overwrite it by measuring again.
     params.calibrate_tilt_geometry = calibrate_tilt && !tilt_pivot_override.has_value();
     if (tilt_pivot_range) params.tilt_pivot_search_range = *tilt_pivot_range;
+    if (scan_voxel) params.voxel_leaf_size = *scan_voxel;
+
+    // Warn rather than silently disappoint: asking for fused cells finer than
+    // the spacing the scans were thinned to cannot add detail, it just splits
+    // the same points across more cells.
+    const float fusion_cell = (reconcile_params.mode == ReconcileParams::Mode::Volumetric)
+        ? reconcile_params.voxel_size : reconcile_params.height_cell;
+    if (fusion_cell < params.voxel_leaf_size)
+    {
+        std::cerr << "  [!] fusion cell (" << fusion_cell << " m) is finer than --scan-voxel ("
+                  << params.voxel_leaf_size << " m), so the extra cells have no extra detail"
+                     " to hold - lower --scan-voxel too\n";
+    }
 
     try
     {

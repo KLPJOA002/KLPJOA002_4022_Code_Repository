@@ -12,7 +12,7 @@
 #include <pcl/common/common.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
-#include <vtkTransform.h>
+#include <vtkPolyData.h>
 
 #include "scan_colors.h"
 
@@ -72,7 +72,7 @@ FusionVisualizer::FusionVisualizer(const std::string& window_name)
         "                        c=re-run coarse  f=re-run fine  n=nudge mode\n"
         "[viewer] all scans:     C=re-run coarse (all)  F=re-run fine (all)\n"
         "[viewer] stage:         space=continue  b=back  r=reset camera  q/ESC=finish\n"
-        "[viewer] ROI crop:      drag the box, space=confirm, x=use full cloud\n\n";
+        "[viewer] ROI crop:      drag the box, space=confirm, d=use full cloud\n\n";
 }
 
 // -------------------------------------------------------------------------
@@ -680,28 +680,30 @@ bool FusionVisualizer::selectRoi(const ScanInput& input,
 
     const bool no_crop = stopped_ || roi_no_crop_requested_;
 
-    // Read the box's world-space extent before tearing it down. The widget
-    // reports a transform on a unit cube centred at the origin, so the crop
-    // bounds are the transformed corners' axis-aligned envelope.
-    double corner_min[3] = { 1e30, 1e30, 1e30 };
-    double corner_max[3] = { -1e30, -1e30, -1e30 };
+    // Read the box's world-space extent before tearing it down.
+    //
+    // Take it from the widget's own polydata, whose eight points are already
+    // in world space. The obvious-looking alternative - GetTransform() - does
+    // NOT give a box-to-world transform: it returns the motion *relative to
+    // where the box was placed* (Translate(centre) . R . Scale .
+    // Translate(-initial centre)), meant for feeding to an actor's
+    // SetUserTransform. Applying it to a unit cube, as this used to, produced
+    // a 1 m cube near the optical centre regardless of where the box actually
+    // was - which for a floor scan at arm's length contains no points at all,
+    // so every crop silently fell back to the full cloud.
+    double bounds_out[6] = { 0, 0, 0, 0, 0, 0 };
+    bool have_bounds = false;
     if (!no_crop)
     {
-        vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-        box_widget_->GetTransform(transform);
-        for (int cx = -1; cx <= 1; cx += 2)
-            for (int cy = -1; cy <= 1; cy += 2)
-                for (int cz = -1; cz <= 1; cz += 2)
-                {
-                    double local[3] = { cx * 0.5, cy * 0.5, cz * 0.5 };
-                    double world[3];
-                    transform->TransformPoint(local, world);
-                    for (int k = 0; k < 3; ++k)
-                    {
-                        corner_min[k] = std::min(corner_min[k], world[k]);
-                        corner_max[k] = std::max(corner_max[k], world[k]);
-                    }
-                }
+        auto box_polydata = vtkSmartPointer<vtkPolyData>::New();
+        box_widget_->GetPolyData(box_polydata);
+        if (box_polydata->GetNumberOfPoints() > 0)
+        {
+            box_polydata->GetBounds(bounds_out);
+            have_bounds = bounds_out[0] <= bounds_out[1] &&
+                          bounds_out[2] <= bounds_out[3] &&
+                          bounds_out[4] <= bounds_out[5];
+        }
     }
 
     box_widget_->Off();
@@ -709,11 +711,16 @@ bool FusionVisualizer::selectRoi(const ScanInput& input,
     viewer_->removePointCloud(kRoiId);
 
     if (no_crop) return false;
+    if (!have_bounds)
+    {
+        std::cerr << "  [!] could not read the crop box - using the full cloud\n";
+        return false;
+    }
 
-    out_min = Eigen::Vector4f(static_cast<float>(corner_min[0]), static_cast<float>(corner_min[1]),
-                               static_cast<float>(corner_min[2]), 1.0f);
-    out_max = Eigen::Vector4f(static_cast<float>(corner_max[0]), static_cast<float>(corner_max[1]),
-                               static_cast<float>(corner_max[2]), 1.0f);
+    out_min = Eigen::Vector4f(static_cast<float>(bounds_out[0]), static_cast<float>(bounds_out[2]),
+                               static_cast<float>(bounds_out[4]), 1.0f);
+    out_max = Eigen::Vector4f(static_cast<float>(bounds_out[1]), static_cast<float>(bounds_out[3]),
+                               static_cast<float>(bounds_out[5]), 1.0f);
     return true;
 }
 

@@ -1507,12 +1507,5 @@ CMakeFiles/fuse_scans.dir/src/visualizer.cpp.o: \
  /usr/include/eigen3/Eigen/Eigenvalues \
  /usr/include/pcl-1.14/pcl/common/common.h \
  /usr/include/pcl-1.14/pcl/common/impl/common.hpp \
- /usr/include/vtk-9.1/vtkTransform.h \
- /usr/include/vtk-9.1/vtkCommonTransformsModule.h \
- /usr/include/vtk-9.1/vtkLinearTransform.h \
- /usr/include/vtk-9.1/vtkHomogeneousTransform.h \
- /usr/include/vtk-9.1/vtkAbstractTransform.h /usr/include/c++/13/mutex \
- /usr/include/c++/13/bits/std_mutex.h \
- /usr/include/c++/13/bits/unique_lock.h \
- /usr/include/vtk-9.1/vtkMatrix4x4.h \
+ /usr/include/vtk-9.1/vtkPolyData.h \
  /home/aru/Joab/Processing/Fuse/src/scan_colors.h

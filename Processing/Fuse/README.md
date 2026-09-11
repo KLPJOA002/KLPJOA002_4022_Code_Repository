@@ -584,6 +584,42 @@ against a known synthetic surface, reconciliation halved the error of the old
 concatenate-and-voxel approach (0.96 mm rms → 0.45 mm, 5–95% spread 3.20 mm
 → 1.47 mm).
 
+## Output density
+
+Two settings control it, and they do different jobs:
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--fusion-cell <m>` | 0.003 | Lateral cell size in height-field mode. **This sets the point count** — one output point per occupied cell, so the count scales roughly as 1/cell². |
+| `--fusion-voxel <m>` | 0.002 | The same role in volumetric mode. |
+| `--scan-voxel <m>` | 0.003 | Spacing each scan is thinned to *when loaded*. This is the **ceiling on real detail** — a finer fusion cell cannot recover what was discarded here. |
+
+Measured on a 6-scan test set:
+
+| settings | output points |
+|---|---|
+| default (scan 3 mm, cell 3 mm) | 10,548 |
+| `--fusion-cell 0.0015` | 29,360 |
+| `--scan-voxel 0.0015 --fusion-cell 0.0015` | 28,623 |
+| `--fusion-cell 0.006` | 2,614 |
+
+Note the third row: adding `--scan-voxel` barely changed the *count*, because
+the count is set by the cell size alone. What it changes is whether those
+points carry genuine detail or just subdivide the same thinned data. So:
+
+- **More points, same information** — lower `--fusion-cell` only.
+- **More points and more real detail** — lower both. Costs memory and time
+  roughly as 1/m², so halving the voxel is about 4× of each.
+
+The program warns if you ask for a fusion cell finer than `--scan-voxel`,
+since that combination cannot add detail.
+
+Two things also remove points after blending: `--fusion-min-scans` (drops
+surface too few scans agree on) and the outlier-removal pass
+(`--no-fusion-sor` to skip it). And if you go much denser, consider lowering
+`--mls-radius` too — but keep it above your residual registration rmse, or the
+surface fit will smooth across genuine relief rather than across noise.
+
 ## Tuning notes (`PipelineParams` in `fusion_pipeline.h`)
 
 - **`voxel_leaf_size`** — set relative to your D456's actual noise floor at your
