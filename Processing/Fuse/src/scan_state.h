@@ -71,6 +71,13 @@ struct ScanState
     // RealSense frame, keeping every raw scan resident costs hundreds of MB
     // for a large session. Re-cropping the ROI reloads from disk instead.
     PointCloudT::Ptr prepared;
+
+    // Surface normals of `prepared`, one per point, in the camera frame and
+    // oriented toward the sensor. Estimated once at load and carried through
+    // `transform` wherever the scan is placed, so neither registration nor
+    // fusion has to re-estimate normals on clouds that grow with the session.
+    NormalCloudT::Ptr normals;
+
     size_t raw_point_count = 0;
 
     // Region of interest in the scan's own frame, applied at load time.
@@ -106,4 +113,8 @@ struct ScanState
     // Points transformed into the common frame. Allocates - call it once
     // and hold the result rather than per-frame in a render loop.
     PointCloudT::Ptr cloudInCommonFrame() const;
+
+    // `prepared` with its normals attached, still in the camera frame - the
+    // form ICP takes a source in. NaN normals if none were estimated.
+    PointCloudNT::Ptr cloudWithNormals() const;
 };

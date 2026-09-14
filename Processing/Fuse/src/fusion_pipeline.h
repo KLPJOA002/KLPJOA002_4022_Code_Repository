@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <vector>
@@ -15,6 +16,7 @@ using PointT      = pcl::PointXYZRGB;
 using PointCloudT = pcl::PointCloud<PointT>;
 using PointNT     = pcl::PointXYZRGBNormal;
 using PointCloudNT = pcl::PointCloud<PointNT>;
+using NormalCloudT = pcl::PointCloud<pcl::Normal>;
 
 // One input scan: its PLY path, and (optionally) a known/approximate
 // rig transform that carries it into a common reference frame.
@@ -73,6 +75,15 @@ struct RegistrationResult
 {
     Eigen::Matrix4f transform      = Eigen::Matrix4f::Identity();
     bool            converged      = false;
+
+    // PCL counts running out of iterations as converging, so `converged`
+    // alone cannot tell a scan that settled from one still moving when ICP
+    // gave up. This can.
+    bool            hit_max_iterations = false;
+
+    // ICP: mean squared distance (m^2) over the correspondences ICP itself
+    // would accept. Feature matching: fraction of the source that is not a
+    // RANSAC inlier.
     double          fitness_score  = std::numeric_limits<double>::max();
 };
 
@@ -96,7 +107,13 @@ struct PipelineParams
     int   icp_max_iterations              = 60;
     double icp_transformation_epsilon     = 1e-8;
     double icp_euclidean_fitness_epsilon  = 1e-6;
-    double icp_fitness_reject_threshold   = 0.0015; // flag a scan's alignment above this
+
+    // Review flag. A flagged scan is still fused - this only marks it for a
+    // look. A refined scan is flagged when ICP hit its iteration cap, or when
+    // its alignment score is more than this many times the batch median.
+    // Relative rather than absolute, because what a good score looks like
+    // depends on the voxel size, the sensor's noise and the scene's relief.
+    double flag_score_ratio               = 1.4;
 
     // Alignment scoring (evaluateAlignment). Correspondence distance for
     // judging a transform after the fact; kept separate from ICP's own so
@@ -212,12 +229,65 @@ RegistrationResult coarseAlignFPFH(const PointCloudT::ConstPtr& source,
                                     const PointCloudT::ConstPtr& target,
                                     const PipelineParams& params);
 
-RegistrationResult refineICP(const PointCloudT::ConstPtr& source,
-                              const PointCloudT::ConstPtr& target,
+// Surface normals for one scan in its own camera frame, oriented toward the
+// sensor at the origin. Estimated once at load: a rigid transform carries a
+// normal along with its point, so a placed scan never needs them re-estimated.
+NormalCloudT::Ptr estimateSensorNormals(const PointCloudT::ConstPtr& cloud, float radius);
+
+// Point-to-plane ICP. Both clouds arrive with their normals attached (see
+// estimateSensorNormals and VoxelMap), so this estimates none itself.
+RegistrationResult refineICP(const PointCloudNT::ConstPtr& source,
+                              const PointCloudNT::ConstPtr& target,
                               const Eigen::Matrix4f& initial_guess,
                               const PipelineParams& params);
 
 PointCloudT::Ptr voxelDownsample(const PointCloudT::ConstPtr& input, float leaf_size);
+
+// The map a scan registers against: every scan placed so far, merged into
+// voxels and built up incrementally as scans are added.
+//
+// Each voxel keeps running sums, so it holds the true centroid of every point
+// that ever landed in it, plus the mean colour and normal. That buys two
+// things over re-voxelising the whole map after each scan. Adding a scan costs
+// time proportional to that scan rather than to the map. And every scan gets
+// equal weight: re-voxelising a map of centroids counts each earlier centroid
+// as a single point, which hands the newest scan about half the weight
+// wherever it overlaps - so the map chased the latest scan instead of holding
+// the consensus of all of them.
+class VoxelMap
+{
+public:
+    // leaf_size <= 0 keeps every point as its own entry (no merging).
+    explicit VoxelMap(float leaf_size);
+
+    // Adds `cloud` carried into the map frame by `transform`. `normals`, if
+    // given, holds one normal per point in the same frame as `cloud`.
+    void add(const PointCloudT& cloud, const NormalCloudT* normals,
+             const Eigen::Matrix4f& transform);
+
+    bool   empty() const { return cells_.empty(); }
+    size_t size() const  { return cells_.size(); }
+
+    PointCloudT::Ptr cloud() const;
+
+    // Voxels no finite normal reached get NaN normals, which point-to-plane
+    // ICP skips.
+    PointCloudNT::Ptr cloudWithNormals() const;
+
+private:
+    struct Cell
+    {
+        double   x = 0.0, y = 0.0, z = 0.0;
+        float    nx = 0.0f, ny = 0.0f, nz = 0.0f;
+        float    r = 0.0f, g = 0.0f, b = 0.0f;
+        uint32_t count = 0;
+        uint32_t normal_count = 0;
+    };
+
+    float                                  leaf_size_;
+    std::vector<Cell>                      cells_;  // insertion order, so output order is deterministic
+    std::unordered_map<uint64_t, uint32_t> index_;  // voxel key -> index into cells_
+};
 
 struct AlignmentQuality; // defined in scan_state.h
 

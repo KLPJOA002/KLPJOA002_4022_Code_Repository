@@ -321,6 +321,7 @@ void FusionSession::loadAll(const ProgressFn& progress, const RoiProvider& roi)
                 raw = cropCloud(raw, scan.roi_min, scan.roi_max);
 
             scan.prepared = preprocessCloud(raw, params_);
+            scan.normals  = estimateSensorNormals(scan.prepared, params_.normal_radius);
             // `raw` goes out of scope here on purpose - see ScanState::prepared.
 
             std::cout << "[load] " << scan.label() << ": " << scan.raw_point_count
@@ -393,26 +394,22 @@ void FusionSession::reloadScan(size_t index, const RoiProvider& roi)
         raw = cropCloud(raw, scan.roi_min, scan.roi_max);
 
     scan.prepared = preprocessCloud(raw, params_);
+    scan.normals  = estimateSensorNormals(scan.prepared, params_.normal_radius);
     scan.status = (index == reference_index_) ? ScanStatus::Reference : ScanStatus::Pending;
     scan.flagged = false;
 }
 
 // -------------------------------------------------------------------------
-PointCloudT::Ptr FusionSession::buildMap(size_t exclude_index, size_t max_index) const
+VoxelMap FusionSession::buildMap(size_t exclude_index, size_t max_index) const
 {
-    auto map = std::make_shared<PointCloudT>();
+    VoxelMap map(mapLeafSize());
     for (size_t j = 0; j < scans_.size() && j < max_index; ++j)
     {
         if (j == exclude_index) continue;
         const auto& other = scans_[j];
         if (!other.loaded() || !contributesToFusion(other.status)) continue;
-
-        PointCloudT transformed;
-        pcl::transformPointCloud(*other.prepared, transformed, other.transform);
-        *map += transformed;
+        map.add(*other.prepared, other.normals.get(), other.transform);
     }
-    if (params_.downsample_accumulated_map && !map->empty())
-        map = voxelDownsample(map, params_.voxel_leaf_size);
     return map;
 }
 
@@ -421,17 +418,28 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
 {
     auto& scan = scans_[index];
 
+    // Two questions, two measures. Whether a pose lands on the map at all is
+    // a question of coverage - how much of the scan has map surface nearby -
+    // which nearest-neighbour distance answers well. Which of two poses fits
+    // *better* goes to scoreAlignment, which on a flat scene compares heights
+    // at matching positions and so sees the in-plane slide and spin that
+    // nearest-neighbour distance is nearly blind to. (The height comparison
+    // is no good for coverage: it only looks where the clouds already overlap.)
+
     // Hypothesis 1: the rig's own geometry, if we have it. Cheap, and on a
     // calibrated rig it beats feature matching outright - but a wrong sign
     // or a mis-set axis makes it confidently wrong, which is why we score
     // it instead of trusting it.
-    bool have_seed = scan.input.has_initial_guess;
-    AlignmentQuality seed_quality;
+    const bool have_seed = scan.input.has_initial_guess;
+    AlignmentQuality seed_coverage, seed_quality;
     if (have_seed)
-        seed_quality = evaluateAlignment(scan.prepared, map, scan.input.initial_guess, params_);
+    {
+        seed_coverage = evaluateAlignment(scan.prepared, map, scan.input.initial_guess, params_);
+        seed_quality  = scoreAlignment(scan.prepared, map, scan.input.initial_guess);
+    }
 
     const bool seed_is_usable =
-        have_seed && seed_quality.inlier_fraction >= params_.coarse_min_inlier_fraction;
+        have_seed && seed_coverage.inlier_fraction >= params_.coarse_min_inlier_fraction;
 
     if (seed_is_usable)
     {
@@ -444,7 +452,7 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
     if (have_seed)
     {
         std::cout << "  [i] rig seed for " << scan.label() << " covers only "
-                  << pct(seed_quality.inlier_fraction) << " of the cloud (need "
+                  << pct(seed_coverage.inlier_fraction) << " of the cloud (need "
                   << pct(params_.coarse_min_inlier_fraction)
                   << ") - falling back to feature matching\n";
     }
@@ -452,24 +460,30 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
     // Hypothesis 2: FPFH + RANSAC against the map. Randomised, so a retry
     // genuinely produces a different answer.
     auto fpfh = coarseAlignFPFH(scan.prepared, map, params_);
-    AlignmentQuality fpfh_quality;
+    AlignmentQuality fpfh_coverage, fpfh_quality;
     if (fpfh.converged)
-        fpfh_quality = evaluateAlignment(scan.prepared, map, fpfh.transform, params_);
+    {
+        fpfh_coverage = evaluateAlignment(scan.prepared, map, fpfh.transform, params_);
+        fpfh_quality  = scoreAlignment(scan.prepared, map, fpfh.transform);
+    }
 
     // Take whichever hypothesis actually sits better on the map. A weak rig
     // seed still beats a failed feature match, so this is not just "prefer
     // FPFH when the seed is weak".
     const bool fpfh_wins = fpfh.converged && fpfh_quality.score() < seed_quality.score();
 
+    AlignmentQuality chosen_coverage;
     if (fpfh_wins)
     {
         scan.coarse_transform = fpfh.transform;
         scan.coarse_quality   = fpfh_quality;
+        chosen_coverage       = fpfh_coverage;
     }
     else if (have_seed)
     {
         scan.coarse_transform = scan.input.initial_guess;
         scan.coarse_quality   = seed_quality;
+        chosen_coverage       = seed_coverage;
     }
     else
     {
@@ -480,14 +494,14 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
         return;
     }
 
-    scan.status = scan.coarse_quality.inlier_fraction >= params_.coarse_min_inlier_fraction
+    scan.status = chosen_coverage.inlier_fraction >= params_.coarse_min_inlier_fraction
         ? ScanStatus::CoarseAligned
         : ScanStatus::CoarseFailed;
 
     if (scan.status == ScanStatus::CoarseFailed)
     {
         std::cerr << "  [!] best coarse hypothesis for " << scan.label() << " covers only "
-                  << pct(scan.coarse_quality.inlier_fraction)
+                  << pct(chosen_coverage.inlier_fraction)
                   << " of the cloud - marking it coarse-failed\n";
     }
 }
@@ -980,8 +994,8 @@ void FusionSession::runTiltCalibrationStage(const ProgressFn& progress, bool sig
     // Align each candidate properly, smallest tilt first, against a map that
     // grows as we go - same ordering logic as the main batch, for the same
     // reason: each scan gets the most surface possible to match against.
-    auto map = std::make_shared<PointCloudT>();
-    pcl::transformPointCloud(*reference.prepared, *map, reference.transform);
+    VoxelMap map(mapLeafSize());
+    map.add(*reference.prepared, reference.normals.get(), reference.transform);
 
     const Eigen::Matrix4f reference_pose = reference.transform;
     const Eigen::Matrix4f reference_pose_inv = reference_pose.inverse();
@@ -997,13 +1011,14 @@ void FusionSession::runTiltCalibrationStage(const ProgressFn& progress, bool sig
         auto& scan = scans_[index];
         if (progress) progress(n, candidates.size(), scan.label());
 
-        const auto icp = refineICP(scan.prepared, map, scan.input.initial_guess, params_);
+        const auto icp = refineICP(scan.cloudWithNormals(), map.cloudWithNormals(),
+                                   scan.input.initial_guess, params_);
         if (!icp.converged)
         {
             std::cerr << "  [!] " << scan.label() << " did not converge - not using it\n";
             continue;
         }
-        const auto quality = evaluateAlignment(scan.prepared, map, icp.transform, params_);
+        const auto quality = evaluateAlignment(scan.prepared, map.cloud(), icp.transform, params_);
         if (quality.inlier_fraction < 0.5)
         {
             std::cerr << "  [!] " << scan.label() << " only reached "
@@ -1044,11 +1059,7 @@ void FusionSession::runTiltCalibrationStage(const ProgressFn& progress, bool sig
         }
 
         // Fold it in so the next candidate matches against more surface.
-        PointCloudT placed;
-        pcl::transformPointCloud(*scan.prepared, placed, icp.transform);
-        *map += placed;
-        if (params_.downsample_accumulated_map)
-            map = voxelDownsample(map, params_.voxel_leaf_size);
+        map.add(*scan.prepared, scan.normals.get(), icp.transform);
     }
 
     if (model_rotations.size() < 2)
@@ -1235,10 +1246,10 @@ double FusionSession::scoreDirectionHypothesis(const std::vector<size_t>& repres
                                                  const std::vector<float>& signs,
                                                  std::vector<AlignmentQuality>* per_group)
 {
-    auto map = std::make_shared<PointCloudT>();
+    VoxelMap map(mapLeafSize());
     {
         const auto& ref = scans_[representatives[0]];
-        pcl::transformPointCloud(*ref.prepared, *map, ref.transform);
+        map.add(*ref.prepared, nullptr, ref.transform);  // scoring reads no normals
     }
 
     double total = 0.0;
@@ -1254,7 +1265,7 @@ double FusionSession::scoreDirectionHypothesis(const std::vector<size_t>& repres
                                 rig_.rotation_pivot) *
             tiltComponentFor(scan, &rotation_groups_[k]);
 
-        const auto quality = scoreAlignment(scan.prepared, map, guess);
+        const auto quality = scoreAlignment(scan.prepared, map.cloud(), guess);
         if (per_group) per_group->push_back(quality);
 
         // Cap rather than propagate infinity, so one hopeless step doesn't
@@ -1262,11 +1273,7 @@ double FusionSession::scoreDirectionHypothesis(const std::vector<size_t>& repres
         const double score = quality.valid() ? std::min(quality.score(), 10.0) : 10.0;
         total += score;
 
-        PointCloudT placed;
-        pcl::transformPointCloud(*scan.prepared, placed, guess);
-        *map += placed;
-        if (params_.downsample_accumulated_map)
-            map = voxelDownsample(map, params_.voxel_leaf_size);
+        map.add(*scan.prepared, nullptr, guess);
     }
     return total;
 }
@@ -1454,12 +1461,11 @@ void FusionSession::runCoarseBatch(const ProgressFn& progress)
         return;
     }
 
-    // Running map, appended to as scans are placed, rather than rebuilt from
-    // scratch per scan (which was quadratic in the number of scans).
-    auto map = std::make_shared<PointCloudT>();
+    // Running map, added to as scans are placed rather than rebuilt per scan.
+    VoxelMap map(mapLeafSize());
     {
         const auto& ref = scans_[reference_index_];
-        pcl::transformPointCloud(*ref.prepared, *map, ref.transform);
+        map.add(*ref.prepared, ref.normals.get(), ref.transform);
     }
 
     for (size_t i = 0; i < scans_.size(); ++i)
@@ -1470,7 +1476,7 @@ void FusionSession::runCoarseBatch(const ProgressFn& progress)
 
         if (progress) progress(i, scans_.size(), scan.label());
 
-        computeCoarseFor(i, map);
+        computeCoarseFor(i, map.cloud());
         // Coarse output *is* the current pose estimate until ICP improves it.
         scan.transform = scan.coarse_transform;
 
@@ -1480,12 +1486,7 @@ void FusionSession::runCoarseBatch(const ProgressFn& progress)
                   << "  (" << toString(scan.status) << ")\n";
 
         if (!contributesToFusion(scan.status)) continue;
-
-        PointCloudT placed;
-        pcl::transformPointCloud(*scan.prepared, placed, scan.transform);
-        *map += placed;
-        if (params_.downsample_accumulated_map)
-            map = voxelDownsample(map, params_.voxel_leaf_size);
+        map.add(*scan.prepared, scan.normals.get(), scan.transform);
     }
 }
 
@@ -1494,10 +1495,10 @@ void FusionSession::runRefineBatch(const ProgressFn& progress)
 {
     if (reference_index_ >= scans_.size()) return;
 
-    auto map = std::make_shared<PointCloudT>();
+    VoxelMap map(mapLeafSize());
     {
         const auto& ref = scans_[reference_index_];
-        pcl::transformPointCloud(*ref.prepared, *map, ref.transform);
+        map.add(*ref.prepared, ref.normals.get(), ref.transform);
     }
 
     for (size_t i = 0; i < scans_.size(); ++i)
@@ -1510,38 +1511,83 @@ void FusionSession::runRefineBatch(const ProgressFn& progress)
 
         if (progress) progress(i, scans_.size(), scan.label());
 
-        scan.icp_result = refineICP(scan.prepared, map, scan.coarse_transform, params_);
-
-        if (scan.icp_result.converged)
-        {
-            scan.transform    = scan.icp_result.transform;
-            scan.fine_quality = evaluateAlignment(scan.prepared, map, scan.transform, params_);
-            scan.status       = ScanStatus::Refined;
-            scan.flagged      = scan.icp_result.fitness_score > params_.icp_fitness_reject_threshold;
-        }
-        else
-        {
-            // Keep the coarse pose: it's worse, but it's still where the rig
-            // says the scan belongs, and it keeps the scan visible for review
-            // rather than silently vanishing.
-            scan.transform = scan.coarse_transform;
-            scan.status    = ScanStatus::RefineFailed;
-            scan.flagged   = true;
-        }
-
-        std::cout << "[refine] " << scan.label()
-                  << "  icp_fitness=" << scan.icp_result.fitness_score
-                  << "  rmse=" << mm(scan.fine_quality.rmse) << "mm"
-                  << "  overlap=" << pct(scan.fine_quality.inlier_fraction)
-                  << (scan.flagged ? "  [FLAGGED]" : "") << "\n";
+        refineAgainst(i, map);
 
         if (!contributesToFusion(scan.status)) continue;
+        map.add(*scan.prepared, scan.normals.get(), scan.transform);
+    }
 
-        PointCloudT placed;
-        pcl::transformPointCloud(*scan.prepared, placed, scan.transform);
-        *map += placed;
-        if (params_.downsample_accumulated_map)
-            map = voxelDownsample(map, params_.voxel_leaf_size);
+    updateFlags();
+}
+
+// -------------------------------------------------------------------------
+float FusionSession::mapLeafSize() const
+{
+    return params_.downsample_accumulated_map ? params_.voxel_leaf_size : 0.0f;
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::refineAgainst(size_t index, const VoxelMap& map)
+{
+    auto& scan = scans_[index];
+    scan.icp_result = refineICP(scan.cloudWithNormals(), map.cloudWithNormals(),
+                                 scan.coarse_transform, params_);
+
+    if (scan.icp_result.converged)
+    {
+        scan.transform = scan.icp_result.transform;
+        // The same scene-aware measure the coarse stage uses, so the two are
+        // comparable - and so a flat scene's in-plane error actually counts
+        // against the confidence fusion derives from this.
+        scan.fine_quality = scoreAlignment(scan.prepared, map.cloud(), scan.transform);
+        scan.status       = ScanStatus::Refined;
+    }
+    else
+    {
+        // Keep the coarse pose: it's worse, but it's still where the rig
+        // says the scan belongs, and it keeps the scan visible for review
+        // rather than silently vanishing.
+        scan.transform = scan.coarse_transform;
+        scan.status    = ScanStatus::RefineFailed;
+    }
+
+    std::cout << "[refine] " << scan.label()
+              << "  icp_fitness=" << scan.icp_result.fitness_score
+              << "  rmse=" << mm(scan.fine_quality.rmse) << "mm"
+              << "  overlap=" << pct(scan.fine_quality.inlier_fraction)
+              << (scan.icp_result.hit_max_iterations ? "  [hit iteration cap]" : "")
+              << (scan.status == ScanStatus::RefineFailed ? "  [FAILED]" : "") << "\n";
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::updateFlags()
+{
+    // Judged against the batch rather than a fixed threshold: what a good
+    // score looks like depends on the voxel size, the sensor's noise at this
+    // range and the scene's relief, none of which a constant can know. The
+    // median is what "normal" looks like for this session, and isn't dragged
+    // around by the few scans that are actually bad.
+    std::vector<double> scores;
+    for (const auto& s : scans_)
+        if (s.status == ScanStatus::Refined && s.fine_quality.valid())
+            scores.push_back(s.fine_quality.score());
+
+    double median = 0.0;
+    if (!scores.empty())
+    {
+        std::sort(scores.begin(), scores.end());
+        median = scores[scores.size() / 2];
+    }
+    const bool compare_to_batch = scores.size() >= 3;  // fewer, and a median says nothing
+
+    for (auto& s : scans_)
+    {
+        if (s.status == ScanStatus::RefineFailed) { s.flagged = true; continue; }
+        if (s.status != ScanStatus::Refined) continue;
+
+        s.flagged = s.icp_result.hit_max_iterations ||
+                    !s.fine_quality.valid() ||
+                    (compare_to_batch && s.fine_quality.score() > params_.flag_score_ratio * median);
     }
 }
 
@@ -1553,13 +1599,13 @@ void FusionSession::coarseAlignScan(size_t index)
 
     // Aligning against every *other* placed scan, not just earlier ones -
     // by review time the whole map exists, so a redo gets the benefit of it.
-    auto map = buildMap(index, scans_.size());
-    if (map->empty())
+    const auto map = buildMap(index, scans_.size());
+    if (map.empty())
     {
         std::cerr << "  [!] nothing placed to align " << scan.label() << " against\n";
         return;
     }
-    computeCoarseFor(index, map);
+    computeCoarseFor(index, map.cloud());
     scan.transform = scan.coarse_transform;
 
     std::cout << "[coarse] " << scan.label()
@@ -1574,33 +1620,14 @@ void FusionSession::refineScan(size_t index)
     auto& scan = scans_.at(index);
     if (!scan.loaded() || index == reference_index_) return;
 
-    auto map = buildMap(index, scans_.size());
-    if (map->empty())
+    const auto map = buildMap(index, scans_.size());
+    if (map.empty())
     {
         std::cerr << "  [!] nothing placed to refine " << scan.label() << " against\n";
         return;
     }
-
-    scan.icp_result = refineICP(scan.prepared, map, scan.coarse_transform, params_);
-    if (scan.icp_result.converged)
-    {
-        scan.transform    = scan.icp_result.transform;
-        scan.fine_quality = evaluateAlignment(scan.prepared, map, scan.transform, params_);
-        scan.status       = ScanStatus::Refined;
-        scan.flagged      = scan.icp_result.fitness_score > params_.icp_fitness_reject_threshold;
-    }
-    else
-    {
-        scan.transform = scan.coarse_transform;
-        scan.status    = ScanStatus::RefineFailed;
-        scan.flagged   = true;
-    }
-
-    std::cout << "[refine] " << scan.label()
-              << "  icp_fitness=" << scan.icp_result.fitness_score
-              << "  rmse=" << mm(scan.fine_quality.rmse) << "mm"
-              << "  overlap=" << pct(scan.fine_quality.inlier_fraction)
-              << (scan.flagged ? "  [FLAGGED]" : "") << "\n";
+    refineAgainst(index, map);
+    updateFlags();
 }
 
 // -------------------------------------------------------------------------
@@ -1672,6 +1699,19 @@ std::vector<ScanContribution> FusionSession::buildContributions() const
         ScanContribution contribution;
         contribution.cloud = scan.cloudInCommonFrame();
         contribution.label = scan.label();
+
+        // A rigid transform turns normals by its rotation alone.
+        if (scan.normals && scan.normals->size() == scan.prepared->size())
+        {
+            auto turned = std::make_shared<NormalCloudT>(*scan.normals);
+            const Eigen::Matrix3f rotation = scan.transform.topLeftCorner<3, 3>();
+            for (auto& n : *turned)
+            {
+                const Eigen::Vector3f v = rotation * n.getNormalVector3fMap();
+                n.getNormalVector3fMap() = v;
+            }
+            contribution.normals = turned;
+        }
 
         // The scans were captured in camera frames whose origin is the
         // sensor, so the transform's translation is where the camera stood

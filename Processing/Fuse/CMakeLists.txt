@@ -1,6 +1,19 @@
 cmake_minimum_required(VERSION 3.10)
 project(pointcloud_fusion)
 
+# Default to an optimised build. A plain `cmake ..` otherwise compiles with no
+# optimisation at all, and PCL's registration code (ICP, correspondence search,
+# the point-to-plane solver) is header-only, so it is compiled here and inherits
+# that. Measured on a 28-scan session: 83 s unoptimised, 15 s Release, identical
+# output. Pass -DCMAKE_BUILD_TYPE=Debug when you need a debugger.
+#
+# Don't add -march=native: the distro PCL libraries are built without it, and
+# mixing the two gives Eigen types different alignment on either side of the
+# library boundary, which can crash.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

@@ -60,6 +60,13 @@ cmake ..
 make -j$(nproc)
 ```
 
+The build defaults to Release. An unoptimised build ran the same 28-scan
+session about 6x slower with identical output, because PCL's registration
+code is compiled into this program and inherits its flags. Use
+`cmake -DCMAKE_BUILD_TYPE=Debug ..` when you need a debugger. An existing
+build directory configured without a type switches to Release on the next
+`cmake ..`.
+
 ## Input layout — session folders (recommended for your rig)
 
 ```
@@ -323,6 +330,15 @@ The console says which metric is in use:
                            nearest-neighbour distance cannot see in-plane error here
 ```
 
+On a flat scene this metric is behind the rmse and overlap figures in the
+coarse and refine tables, and behind the per-scan confidence fusion uses.
+Whether a coarse pose is accepted at all still uses nearest-neighbour overlap,
+because that is a question of coverage - how much of the scan has map surface
+nearby - and the height comparison only looks where the clouds already
+overlap. Moving refined scans by known amounts on a real session shows the
+difference: a 5 mm in-plane slide raised the height-field score by 36%, the
+nearest-neighbour score by only 16%.
+
 ## Rotation direction
 
 The capture rig names every rotation folder with a positive angle
@@ -489,7 +505,7 @@ confirm the crop, `d` to use the full cloud.
 
 Legend columns are `#` (index), `st` (status: `R`eference, `c`oarse,
 re`F`ined, `X` excluded, `!` failed), scan name, rmse, and overlap fraction.
-A trailing `!` marks a scan flagged for high ICP fitness error. The same
+A trailing `!` marks a flagged scan (see `flag_score_ratio` below). The same
 per-scan table is printed to the console at every review stage, so a headless
 run gives you the same numbers.
 
@@ -636,9 +652,11 @@ surface fit will smooth across genuine relief rather than across noise.
 - **`icp_max_correspondence_distance`** — should be a few times your coarse
   alignment's expected error. Too tight and ICP can't find correspondences to
   even start converging; too loose and it can lock onto the wrong surface.
-- **`icp_fitness_reject_threshold`** — flags (not silently drops) scans whose
-  fine alignment fitness is suspiciously high; worth inspecting those manually
-  in the viewer.
+- **`flag_score_ratio`** — flags (not silently drops) a refined scan whose
+  alignment score is more than this many times the batch median, or whose ICP
+  run hit its iteration cap; worth inspecting those in the viewer. Relative
+  rather than absolute, since a good score depends on the voxel size, sensor
+  noise and relief.
 - **`eval_correspondence_distance`** — the radius used to *score* an alignment
   (rmse + overlap fraction), separate from ICP's own correspondence distance
   so scores stay comparable between the coarse and fine stages. Set it near

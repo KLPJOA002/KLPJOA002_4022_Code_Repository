@@ -6,5 +6,5 @@ CXX_DEFINES = -DBOOST_ATOMIC_DYN_LINK -DBOOST_ATOMIC_NO_LIB -DBOOST_FILESYSTEM_D
 
 CXX_INCLUDES = -isystem /usr/include/eigen3 -isystem /usr/include/pcl-1.14 -isystem /usr/include/ni -isystem /usr/include/openni2 -isystem /usr/include/vtk-9.1 -isystem /usr/include/jsoncpp -isystem /usr/include/freetype2 -isystem /usr/include/x86_64-linux-gnu/qt5 -isystem /usr/include/x86_64-linux-gnu/qt5/QtOpenGL -isystem /usr/include/x86_64-linux-gnu/qt5/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt5/QtGui -isystem /usr/include/x86_64-linux-gnu/qt5/QtCore -isystem /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++
 
-CXX_FLAGS = -std=gnu++17 -fPIC -fopenmp
+CXX_FLAGS = -O3 -DNDEBUG -std=gnu++17 -fPIC -fopenmp
 

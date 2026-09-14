@@ -1,5 +1,8 @@
 #include "scan_state.h"
 
+#include <limits>
+
+#include <pcl/common/io.h>
 #include <pcl/common/transforms.h>
 
 const char* toString(ScanStatus status)
@@ -31,5 +34,30 @@ PointCloudT::Ptr ScanState::cloudInCommonFrame() const
     auto out = std::make_shared<PointCloudT>();
     if (!loaded()) return out;
     pcl::transformPointCloud(*prepared, *out, transform);
+    return out;
+}
+
+PointCloudNT::Ptr ScanState::cloudWithNormals() const
+{
+    auto out = std::make_shared<PointCloudNT>();
+    if (!loaded()) return out;
+    pcl::copyPointCloud(*prepared, *out);
+
+    const bool have_normals = normals && normals->size() == prepared->size();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    for (size_t i = 0; i < out->size(); ++i)
+    {
+        auto& p = (*out)[i];
+        if (have_normals)
+        {
+            const auto& n = (*normals)[i];
+            p.normal_x = n.normal_x; p.normal_y = n.normal_y; p.normal_z = n.normal_z;
+            p.curvature = n.curvature;
+        }
+        else
+        {
+            p.normal_x = p.normal_y = p.normal_z = nan;
+        }
+    }
     return out;
 }

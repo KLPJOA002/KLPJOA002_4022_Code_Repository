@@ -33,6 +33,11 @@ struct ScanContribution
 {
     PointCloudT::ConstPtr cloud;          // already transformed into the common frame
 
+    // Surface normals, one per point of `cloud`, in the common frame. When
+    // every contribution has them, fusion uses these instead of estimating
+    // normals on the merged cloud - see reconcileScans.
+    NormalCloudT::ConstPtr normals;
+
     // Where the camera was, in the common frame. Used for the incidence and
     // range weights: both need to know which direction the surface was
     // viewed from, which is lost once the points are in a shared frame.

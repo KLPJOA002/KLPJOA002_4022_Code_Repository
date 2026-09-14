@@ -6,6 +6,7 @@
 #include <iostream>
 #include <limits>
 #include <numeric>
+#include <thread>
 #include <unordered_map>
 
 #include <pcl/features/normal_3d_omp.h>
@@ -138,6 +139,20 @@ PointCloudT::Ptr concatenate(const std::vector<ScanContribution>& contributions,
     return merged;
 }
 
+// The contributions' own normals, laid out in the same order as concatenate()
+// lays out their points - or null if any contribution lacks them.
+pcl::PointCloud<pcl::Normal>::Ptr concatenateNormals(const std::vector<ScanContribution>& contributions)
+{
+    auto merged = std::make_shared<pcl::PointCloud<pcl::Normal>>();
+    for (const auto& c : contributions)
+    {
+        if (!c.cloud) continue;
+        if (!c.normals || c.normals->size() != c.cloud->size()) return nullptr;
+        *merged += *c.normals;
+    }
+    return merged;
+}
+
 pcl::PointCloud<pcl::Normal>::Ptr estimateNormalsFor(const PointCloudT::ConstPtr& cloud,
                                                       float radius)
 {
@@ -252,9 +267,21 @@ PointCloudNT::Ptr reconcileScans(const std::vector<ScanContribution>& contributi
 
     // Normals are needed for the incidence weight, and are worth having
     // anyway for the output.
+    //
+    // Each scan's own normals are used when the contributions carry them:
+    // they describe the surface as that sensor saw it, which is exactly what
+    // the incidence weight asks about, and they are already computed.
+    // Estimating on the merged cloud instead means every neighbourhood search
+    // wades through every overlapping scan's copy of the surface - on a
+    // 28-scan session at 1 mm that single step took 220 s, most of fusion -
+    // and it blurs normals across whatever offset remains between the copies.
     pcl::PointCloud<pcl::Normal>::Ptr normals;
     if (params.weight_by_incidence || params.estimate_normals)
-        normals = estimateNormalsFor(merged, params.normal_radius);
+    {
+        normals = concatenateNormals(contributions);
+        if (!normals)
+            normals = estimateNormalsFor(merged, params.normal_radius);
+    }
 
     // --- Per-point weights ------------------------------------------------
     std::vector<float> weights(merged->size(), 1.0f);
@@ -470,6 +497,9 @@ PointCloudNT::Ptr reconcileScans(const std::vector<ScanContribution>& contributi
         mls.setSearchRadius(params.mls_radius);
         mls.setPolynomialOrder(params.mls_polynomial_order);
         mls.setComputeNormals(true);
+        // Each point's fit is independent, so threads change only the order
+        // points come out in. PCL defaults to one.
+        mls.setNumberOfThreads(std::max(1u, std::thread::hardware_concurrency()));
         mls.process(*output);
 
         if (output->empty())

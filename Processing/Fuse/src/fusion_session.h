@@ -277,7 +277,19 @@ private:
     // sequential: each scan aligns against what came before it, giving
     // ICP progressively more surface without ever matching against a scan
     // that hasn't been placed yet).
-    PointCloudT::Ptr buildMap(size_t exclude_index, size_t max_index) const;
+    VoxelMap buildMap(size_t exclude_index, size_t max_index) const;
+
+    // Leaf size the running map merges at: the scan voxel, or 0 (no merging)
+    // when downsample_accumulated_map is off.
+    float mapLeafSize() const;
+
+    // ICP-refines one scan against `map` and records the result. Shared by
+    // the batch and the single-scan redo so the two cannot drift apart.
+    void refineAgainst(size_t index, const VoxelMap& map);
+
+    // Re-derives every refined scan's review flag. Run after any refine,
+    // since the threshold is relative to the whole batch.
+    void updateFlags();
 
     // Scores one complete assignment of per-step directions.
     double scoreDirectionHypothesis(const std::vector<size_t>& representatives,
