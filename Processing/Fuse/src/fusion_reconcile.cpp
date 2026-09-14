@@ -4,11 +4,13 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <unordered_map>
 
 #include <pcl/features/normal_3d_omp.h>
-#include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/common/centroid.h>
+#include <pcl/common/io.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/surface/mls.h>
 
@@ -146,6 +148,65 @@ pcl::PointCloud<pcl::Normal>::Ptr estimateNormalsFor(const PointCloudT::ConstPtr
     ne.setSearchMethod(std::make_shared<pcl::search::KdTree<PointT>>());
     ne.compute(*normals);
     return normals;
+}
+
+// Drops points far from the plane through their `neighbours` nearest
+// neighbours - see ReconcileParams::run_outlier_removal for why this rather
+// than statistical outlier removal. The cut is `stddev_mult` standard
+// deviations above the mean residual, so it adapts to however smooth the
+// blended surface is.
+PointCloudT::Ptr removeOffSurfaceOutliers(const PointCloudT::ConstPtr& cloud,
+                                           int neighbours, double stddev_mult)
+{
+    const size_t n = cloud->size();
+    const int k = std::max(3, neighbours);
+    if (n <= static_cast<size_t>(k)) return std::make_shared<PointCloudT>(*cloud);
+
+    pcl::search::KdTree<PointT> tree;
+    tree.setInputCloud(cloud);
+
+    // NaN marks points with no usable fit; they are kept rather than judged.
+    std::vector<float> residual(n, std::numeric_limits<float>::quiet_NaN());
+    pcl::Indices indices;
+    std::vector<float> sq_distances;
+    for (size_t i = 0; i < n; ++i)
+    {
+        const auto& p = (*cloud)[i];
+        if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) continue;
+        // k + 1 because the point finds itself; it stays in the fit, which
+        // only makes the test slightly more lenient.
+        if (tree.nearestKSearch(p, k + 1, indices, sq_distances) < 4) continue;
+
+        Eigen::Matrix3f covariance;
+        Eigen::Vector4f centroid;
+        if (pcl::computeMeanAndCovarianceMatrix(*cloud, indices, covariance, centroid) < 3)
+            continue;
+
+        Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> solver(covariance);
+        const Eigen::Vector3f normal = solver.eigenvectors().col(0); // smallest eigenvalue
+        residual[i] = std::abs(normal.dot(p.getVector3fMap() - centroid.head<3>()));
+    }
+
+    double sum = 0.0, sum_sq = 0.0;
+    size_t counted = 0;
+    for (float r : residual)
+    {
+        if (!std::isfinite(r)) continue;
+        sum += r; sum_sq += static_cast<double>(r) * r; ++counted;
+    }
+    if (counted == 0) return std::make_shared<PointCloudT>(*cloud);
+    const double mean = sum / static_cast<double>(counted);
+    const double stddev = std::sqrt(std::max(0.0, sum_sq / static_cast<double>(counted) - mean * mean));
+    const double cut = mean + stddev_mult * stddev;
+
+    auto kept = std::make_shared<PointCloudT>();
+    kept->reserve(n);
+    for (size_t i = 0; i < n; ++i)
+        if (!(residual[i] > cut)) kept->push_back((*cloud)[i]);
+    kept->width = kept->size();
+    kept->height = 1;
+    kept->is_dense = false;
+    return kept;
 }
 
 } // namespace
@@ -395,15 +456,8 @@ PointCloudNT::Ptr reconcileScans(const std::vector<ScanContribution>& contributi
     // --- Outlier removal ---------------------------------------------------
     PointCloudT::Ptr working = blended;
     if (params.run_outlier_removal && !working->empty())
-    {
-        auto cleaned = std::make_shared<PointCloudT>();
-        pcl::StatisticalOutlierRemoval<PointT> sor;
-        sor.setInputCloud(working);
-        sor.setMeanK(params.sor_mean_k);
-        sor.setStddevMulThresh(params.sor_stddev_mult);
-        sor.filter(*cleaned);
-        working = cleaned;
-    }
+        working = removeOffSurfaceOutliers(working, params.outlier_neighbours,
+                                            params.outlier_stddev_mult);
     local.points_after_outlier_removal = working->size();
 
     // --- Surface fit --------------------------------------------------------

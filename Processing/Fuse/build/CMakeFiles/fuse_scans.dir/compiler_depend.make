@@ -1395,6 +1395,25 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
   /usr/include/assert.h \
+  /usr/include/boost/algorithm/string/compare.hpp \
+  /usr/include/boost/algorithm/string/config.hpp \
+  /usr/include/boost/algorithm/string/constants.hpp \
+  /usr/include/boost/algorithm/string/detail/finder.hpp \
+  /usr/include/boost/algorithm/string/detail/predicate.hpp \
+  /usr/include/boost/algorithm/string/find.hpp \
+  /usr/include/boost/algorithm/string/finder.hpp \
+  /usr/include/boost/algorithm/string/predicate.hpp \
+  /usr/include/boost/array.hpp \
+  /usr/include/boost/assert.hpp \
+  /usr/include/boost/assert/source_location.hpp \
+  /usr/include/boost/concept/assert.hpp \
+  /usr/include/boost/concept/detail/backward_compatibility.hpp \
+  /usr/include/boost/concept/detail/concept_def.hpp \
+  /usr/include/boost/concept/detail/concept_undef.hpp \
+  /usr/include/boost/concept/detail/general.hpp \
+  /usr/include/boost/concept/detail/has_constraints.hpp \
+  /usr/include/boost/concept/usage.hpp \
+  /usr/include/boost/concept_check.hpp \
   /usr/include/boost/config.hpp \
   /usr/include/boost/config/compiler/gcc.hpp \
   /usr/include/boost/config/detail/cxx_composite.hpp \
@@ -1404,16 +1423,32 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/config/detail/select_stdlib_config.hpp \
   /usr/include/boost/config/detail/suffix.hpp \
   /usr/include/boost/config/helper_macros.hpp \
+  /usr/include/boost/config/no_tr1/cmath.hpp \
   /usr/include/boost/config/no_tr1/utility.hpp \
   /usr/include/boost/config/platform/linux.hpp \
+  /usr/include/boost/config/pragma_message.hpp \
   /usr/include/boost/config/stdlib/libstdcpp3.hpp \
   /usr/include/boost/config/user.hpp \
   /usr/include/boost/config/workaround.hpp \
+  /usr/include/boost/container/container_fwd.hpp \
+  /usr/include/boost/container/detail/std_fwd.hpp \
   /usr/include/boost/core/addressof.hpp \
+  /usr/include/boost/core/checked_delete.hpp \
+  /usr/include/boost/core/cmath.hpp \
   /usr/include/boost/core/enable_if.hpp \
+  /usr/include/boost/core/noncopyable.hpp \
   /usr/include/boost/core/ref.hpp \
+  /usr/include/boost/core/snprintf.hpp \
+  /usr/include/boost/core/swap.hpp \
+  /usr/include/boost/core/use_default.hpp \
+  /usr/include/boost/cstdint.hpp \
   /usr/include/boost/current_function.hpp \
+  /usr/include/boost/detail/basic_pointerbuf.hpp \
+  /usr/include/boost/detail/indirect_traits.hpp \
+  /usr/include/boost/detail/lcast_precision.hpp \
+  /usr/include/boost/detail/select_type.hpp \
   /usr/include/boost/detail/workaround.hpp \
+  /usr/include/boost/exception/exception.hpp \
   /usr/include/boost/fusion/adapted/mpl.hpp \
   /usr/include/boost/fusion/adapted/mpl/detail/at_impl.hpp \
   /usr/include/boost/fusion/adapted/mpl/detail/begin_impl.hpp \
@@ -1609,6 +1644,37 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/fusion/view/single_view/detail/value_of_impl.hpp \
   /usr/include/boost/fusion/view/single_view/single_view.hpp \
   /usr/include/boost/fusion/view/single_view/single_view_iterator.hpp \
+  /usr/include/boost/integer.hpp \
+  /usr/include/boost/integer_fwd.hpp \
+  /usr/include/boost/integer_traits.hpp \
+  /usr/include/boost/iterator/advance.hpp \
+  /usr/include/boost/iterator/detail/config_def.hpp \
+  /usr/include/boost/iterator/detail/config_undef.hpp \
+  /usr/include/boost/iterator/detail/enable_if.hpp \
+  /usr/include/boost/iterator/detail/facade_iterator_category.hpp \
+  /usr/include/boost/iterator/distance.hpp \
+  /usr/include/boost/iterator/interoperable.hpp \
+  /usr/include/boost/iterator/is_iterator.hpp \
+  /usr/include/boost/iterator/iterator_adaptor.hpp \
+  /usr/include/boost/iterator/iterator_categories.hpp \
+  /usr/include/boost/iterator/iterator_concepts.hpp \
+  /usr/include/boost/iterator/iterator_facade.hpp \
+  /usr/include/boost/iterator/iterator_traits.hpp \
+  /usr/include/boost/iterator/reverse_iterator.hpp \
+  /usr/include/boost/lexical_cast.hpp \
+  /usr/include/boost/lexical_cast/bad_lexical_cast.hpp \
+  /usr/include/boost/lexical_cast/detail/converter_lexical.hpp \
+  /usr/include/boost/lexical_cast/detail/converter_lexical_streams.hpp \
+  /usr/include/boost/lexical_cast/detail/converter_numeric.hpp \
+  /usr/include/boost/lexical_cast/detail/inf_nan.hpp \
+  /usr/include/boost/lexical_cast/detail/is_character.hpp \
+  /usr/include/boost/lexical_cast/detail/lcast_char_constants.hpp \
+  /usr/include/boost/lexical_cast/detail/lcast_unsigned_converters.hpp \
+  /usr/include/boost/lexical_cast/detail/widest_char.hpp \
+  /usr/include/boost/lexical_cast/try_lexical_convert.hpp \
+  /usr/include/boost/limits.hpp \
+  /usr/include/boost/move/detail/std_ns_begin.hpp \
+  /usr/include/boost/move/detail/std_ns_end.hpp \
   /usr/include/boost/mpl/O1_size.hpp \
   /usr/include/boost/mpl/O1_size_fwd.hpp \
   /usr/include/boost/mpl/advance.hpp \
@@ -1730,6 +1796,7 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/mpl/aux_/preprocessed/gcc/quote.hpp \
   /usr/include/boost/mpl/aux_/preprocessed/gcc/reverse_fold_impl.hpp \
   /usr/include/boost/mpl/aux_/preprocessed/gcc/template_arity.hpp \
+  /usr/include/boost/mpl/aux_/preprocessed/gcc/times.hpp \
   /usr/include/boost/mpl/aux_/preprocessed/gcc/vector.hpp \
   /usr/include/boost/mpl/aux_/preprocessor/def_params_tail.hpp \
   /usr/include/boost/mpl/aux_/preprocessor/default_params.hpp \
@@ -1787,6 +1854,7 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/mpl/identity.hpp \
   /usr/include/boost/mpl/if.hpp \
   /usr/include/boost/mpl/inherit.hpp \
+  /usr/include/boost/mpl/inherit_linearly.hpp \
   /usr/include/boost/mpl/insert.hpp \
   /usr/include/boost/mpl/insert_fwd.hpp \
   /usr/include/boost/mpl/insert_range.hpp \
@@ -1800,6 +1868,7 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/mpl/is_sequence.hpp \
   /usr/include/boost/mpl/iter_fold.hpp \
   /usr/include/boost/mpl/iter_fold_if.hpp \
+  /usr/include/boost/mpl/iterator_category.hpp \
   /usr/include/boost/mpl/iterator_range.hpp \
   /usr/include/boost/mpl/iterator_tags.hpp \
   /usr/include/boost/mpl/joint_view.hpp \
@@ -1811,7 +1880,9 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/mpl/logical.hpp \
   /usr/include/boost/mpl/long.hpp \
   /usr/include/boost/mpl/long_fwd.hpp \
+  /usr/include/boost/mpl/min_max.hpp \
   /usr/include/boost/mpl/minus.hpp \
+  /usr/include/boost/mpl/multiplies.hpp \
   /usr/include/boost/mpl/negate.hpp \
   /usr/include/boost/mpl/next.hpp \
   /usr/include/boost/mpl/next_prior.hpp \
@@ -1819,6 +1890,7 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/mpl/numeric_cast.hpp \
   /usr/include/boost/mpl/or.hpp \
   /usr/include/boost/mpl/pair.hpp \
+  /usr/include/boost/mpl/pair_view.hpp \
   /usr/include/boost/mpl/placeholders.hpp \
   /usr/include/boost/mpl/plus.hpp \
   /usr/include/boost/mpl/pop_back.hpp \
@@ -1842,6 +1914,8 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/mpl/size_t.hpp \
   /usr/include/boost/mpl/size_t_fwd.hpp \
   /usr/include/boost/mpl/tag.hpp \
+  /usr/include/boost/mpl/times.hpp \
+  /usr/include/boost/mpl/transform.hpp \
   /usr/include/boost/mpl/vector.hpp \
   /usr/include/boost/mpl/vector/aux_/O1_size.hpp \
   /usr/include/boost/mpl/vector/aux_/at.hpp \
@@ -1867,6 +1941,27 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/mpl/vector/vector20.hpp \
   /usr/include/boost/mpl/void.hpp \
   /usr/include/boost/mpl/void_fwd.hpp \
+  /usr/include/boost/next_prior.hpp \
+  /usr/include/boost/numeric/conversion/bounds.hpp \
+  /usr/include/boost/numeric/conversion/cast.hpp \
+  /usr/include/boost/numeric/conversion/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/converter.hpp \
+  /usr/include/boost/numeric/conversion/converter_policies.hpp \
+  /usr/include/boost/numeric/conversion/detail/bounds.hpp \
+  /usr/include/boost/numeric/conversion/detail/conversion_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/converter.hpp \
+  /usr/include/boost/numeric/conversion/detail/int_float_mixture.hpp \
+  /usr/include/boost/numeric/conversion/detail/is_subranged.hpp \
+  /usr/include/boost/numeric/conversion/detail/meta.hpp \
+  /usr/include/boost/numeric/conversion/detail/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_common.hpp \
+  /usr/include/boost/numeric/conversion/detail/preprocessed/numeric_cast_traits_long_long.hpp \
+  /usr/include/boost/numeric/conversion/detail/sign_mixture.hpp \
+  /usr/include/boost/numeric/conversion/detail/udt_builtin_mixture.hpp \
+  /usr/include/boost/numeric/conversion/int_float_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/numeric_cast_traits.hpp \
+  /usr/include/boost/numeric/conversion/sign_mixture_enum.hpp \
+  /usr/include/boost/numeric/conversion/udt_builtin_mixture_enum.hpp \
   /usr/include/boost/predef/detail/_cassert.h \
   /usr/include/boost/predef/detail/test.h \
   /usr/include/boost/predef/library/c/_prefix.h \
@@ -1885,12 +1980,15 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/predef/version_number.h \
   /usr/include/boost/preprocessor/arithmetic/add.hpp \
   /usr/include/boost/preprocessor/arithmetic/dec.hpp \
+  /usr/include/boost/preprocessor/arithmetic/detail/div_base.hpp \
+  /usr/include/boost/preprocessor/arithmetic/detail/is_1_number.hpp \
   /usr/include/boost/preprocessor/arithmetic/detail/is_maximum_number.hpp \
   /usr/include/boost/preprocessor/arithmetic/detail/is_minimum_number.hpp \
   /usr/include/boost/preprocessor/arithmetic/detail/maximum_number.hpp \
   /usr/include/boost/preprocessor/arithmetic/inc.hpp \
   /usr/include/boost/preprocessor/arithmetic/limits/dec_256.hpp \
   /usr/include/boost/preprocessor/arithmetic/limits/inc_256.hpp \
+  /usr/include/boost/preprocessor/arithmetic/mod.hpp \
   /usr/include/boost/preprocessor/arithmetic/sub.hpp \
   /usr/include/boost/preprocessor/array/data.hpp \
   /usr/include/boost/preprocessor/array/elem.hpp \
@@ -1904,6 +2002,7 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/preprocessor/comparison/not_equal.hpp \
   /usr/include/boost/preprocessor/config/config.hpp \
   /usr/include/boost/preprocessor/config/limits.hpp \
+  /usr/include/boost/preprocessor/control/deduce_d.hpp \
   /usr/include/boost/preprocessor/control/detail/limits/while_256.hpp \
   /usr/include/boost/preprocessor/control/detail/while.hpp \
   /usr/include/boost/preprocessor/control/expr_iif.hpp \
@@ -1945,17 +2044,21 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/preprocessor/repeat.hpp \
   /usr/include/boost/preprocessor/repetition/detail/for.hpp \
   /usr/include/boost/preprocessor/repetition/detail/limits/for_256.hpp \
+  /usr/include/boost/preprocessor/repetition/enum_binary_params.hpp \
   /usr/include/boost/preprocessor/repetition/enum_params.hpp \
   /usr/include/boost/preprocessor/repetition/enum_trailing_params.hpp \
   /usr/include/boost/preprocessor/repetition/for.hpp \
   /usr/include/boost/preprocessor/repetition/limits/for_256.hpp \
   /usr/include/boost/preprocessor/repetition/limits/repeat_256.hpp \
   /usr/include/boost/preprocessor/repetition/repeat.hpp \
+  /usr/include/boost/preprocessor/repetition/repeat_from_to.hpp \
+  /usr/include/boost/preprocessor/seq/cat.hpp \
   /usr/include/boost/preprocessor/seq/detail/is_empty.hpp \
   /usr/include/boost/preprocessor/seq/elem.hpp \
   /usr/include/boost/preprocessor/seq/enum.hpp \
   /usr/include/boost/preprocessor/seq/fold_left.hpp \
   /usr/include/boost/preprocessor/seq/for_each.hpp \
+  /usr/include/boost/preprocessor/seq/for_each_i.hpp \
   /usr/include/boost/preprocessor/seq/limits/elem_256.hpp \
   /usr/include/boost/preprocessor/seq/limits/enum_256.hpp \
   /usr/include/boost/preprocessor/seq/limits/fold_left_256.hpp \
@@ -1973,18 +2076,65 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/preprocessor/variadic/limits/elem_64.hpp \
   /usr/include/boost/preprocessor/variadic/limits/size_64.hpp \
   /usr/include/boost/preprocessor/variadic/size.hpp \
+  /usr/include/boost/range/algorithm/equal.hpp \
+  /usr/include/boost/range/as_literal.hpp \
+  /usr/include/boost/range/begin.hpp \
+  /usr/include/boost/range/concepts.hpp \
+  /usr/include/boost/range/config.hpp \
+  /usr/include/boost/range/const_iterator.hpp \
+  /usr/include/boost/range/detail/common.hpp \
+  /usr/include/boost/range/detail/extract_optional_type.hpp \
+  /usr/include/boost/range/detail/has_member_size.hpp \
+  /usr/include/boost/range/detail/implementation_help.hpp \
+  /usr/include/boost/range/detail/misc_concept.hpp \
+  /usr/include/boost/range/detail/msvc_has_iterator_workaround.hpp \
+  /usr/include/boost/range/detail/safe_bool.hpp \
+  /usr/include/boost/range/detail/sfinae.hpp \
+  /usr/include/boost/range/detail/str_types.hpp \
+  /usr/include/boost/range/difference_type.hpp \
+  /usr/include/boost/range/distance.hpp \
+  /usr/include/boost/range/empty.hpp \
+  /usr/include/boost/range/end.hpp \
+  /usr/include/boost/range/functions.hpp \
+  /usr/include/boost/range/has_range_iterator.hpp \
+  /usr/include/boost/range/iterator.hpp \
+  /usr/include/boost/range/iterator_range.hpp \
+  /usr/include/boost/range/iterator_range_core.hpp \
+  /usr/include/boost/range/iterator_range_io.hpp \
+  /usr/include/boost/range/mutable_iterator.hpp \
+  /usr/include/boost/range/range_fwd.hpp \
+  /usr/include/boost/range/rbegin.hpp \
+  /usr/include/boost/range/rend.hpp \
+  /usr/include/boost/range/reverse_iterator.hpp \
+  /usr/include/boost/range/size.hpp \
+  /usr/include/boost/range/size_type.hpp \
+  /usr/include/boost/range/value_type.hpp \
   /usr/include/boost/ref.hpp \
   /usr/include/boost/static_assert.hpp \
+  /usr/include/boost/throw_exception.hpp \
+  /usr/include/boost/type.hpp \
   /usr/include/boost/type_traits/add_const.hpp \
   /usr/include/boost/type_traits/add_lvalue_reference.hpp \
+  /usr/include/boost/type_traits/add_pointer.hpp \
   /usr/include/boost/type_traits/add_reference.hpp \
   /usr/include/boost/type_traits/add_rvalue_reference.hpp \
+  /usr/include/boost/type_traits/add_volatile.hpp \
   /usr/include/boost/type_traits/conditional.hpp \
+  /usr/include/boost/type_traits/conjunction.hpp \
+  /usr/include/boost/type_traits/conversion_traits.hpp \
   /usr/include/boost/type_traits/declval.hpp \
   /usr/include/boost/type_traits/detail/config.hpp \
+  /usr/include/boost/type_traits/detail/has_binary_operator.hpp \
   /usr/include/boost/type_traits/detail/is_function_cxx_11.hpp \
   /usr/include/boost/type_traits/detail/is_member_function_pointer_cxx_11.hpp \
   /usr/include/boost/type_traits/detail/yes_no_type.hpp \
+  /usr/include/boost/type_traits/function_traits.hpp \
+  /usr/include/boost/type_traits/has_left_shift.hpp \
+  /usr/include/boost/type_traits/has_minus.hpp \
+  /usr/include/boost/type_traits/has_minus_assign.hpp \
+  /usr/include/boost/type_traits/has_plus.hpp \
+  /usr/include/boost/type_traits/has_plus_assign.hpp \
+  /usr/include/boost/type_traits/has_right_shift.hpp \
   /usr/include/boost/type_traits/integral_constant.hpp \
   /usr/include/boost/type_traits/intrinsics.hpp \
   /usr/include/boost/type_traits/is_abstract.hpp \
@@ -1997,23 +2147,40 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/boost/type_traits/is_const.hpp \
   /usr/include/boost/type_traits/is_convertible.hpp \
   /usr/include/boost/type_traits/is_empty.hpp \
+  /usr/include/boost/type_traits/is_enum.hpp \
+  /usr/include/boost/type_traits/is_float.hpp \
   /usr/include/boost/type_traits/is_floating_point.hpp \
   /usr/include/boost/type_traits/is_function.hpp \
   /usr/include/boost/type_traits/is_integral.hpp \
   /usr/include/boost/type_traits/is_lvalue_reference.hpp \
   /usr/include/boost/type_traits/is_member_function_pointer.hpp \
+  /usr/include/boost/type_traits/is_member_pointer.hpp \
+  /usr/include/boost/type_traits/is_pod.hpp \
   /usr/include/boost/type_traits/is_pointer.hpp \
   /usr/include/boost/type_traits/is_reference.hpp \
   /usr/include/boost/type_traits/is_rvalue_reference.hpp \
   /usr/include/boost/type_traits/is_same.hpp \
+  /usr/include/boost/type_traits/is_scalar.hpp \
+  /usr/include/boost/type_traits/is_signed.hpp \
+  /usr/include/boost/type_traits/is_unsigned.hpp \
   /usr/include/boost/type_traits/is_void.hpp \
+  /usr/include/boost/type_traits/is_volatile.hpp \
+  /usr/include/boost/type_traits/make_unsigned.hpp \
+  /usr/include/boost/type_traits/make_void.hpp \
+  /usr/include/boost/type_traits/negation.hpp \
   /usr/include/boost/type_traits/remove_const.hpp \
   /usr/include/boost/type_traits/remove_cv.hpp \
+  /usr/include/boost/type_traits/remove_pointer.hpp \
   /usr/include/boost/type_traits/remove_reference.hpp \
+  /usr/include/boost/type_traits/remove_volatile.hpp \
   /usr/include/boost/type_traits/same_traits.hpp \
   /usr/include/boost/type_traits/type_identity.hpp \
+  /usr/include/boost/utility.hpp \
+  /usr/include/boost/utility/base_from_member.hpp \
+  /usr/include/boost/utility/binary.hpp \
   /usr/include/boost/utility/detail/result_of_variadic.hpp \
   /usr/include/boost/utility/enable_if.hpp \
+  /usr/include/boost/utility/identity_type.hpp \
   /usr/include/boost/utility/result_of.hpp \
   /usr/include/boost/version.hpp \
   /usr/include/c++/13/algorithm \
@@ -2421,12 +2588,15 @@ CMakeFiles/fuse_scans.dir/src/fusion_reconcile.cpp.o: /home/aru/Joab/Processing/
   /usr/include/pcl-1.14/pcl/features/impl/feature.hpp \
   /usr/include/pcl-1.14/pcl/features/normal_3d.h \
   /usr/include/pcl-1.14/pcl/features/normal_3d_omp.h \
-  /usr/include/pcl-1.14/pcl/filters/filter.h \
-  /usr/include/pcl-1.14/pcl/filters/filter_indices.h \
-  /usr/include/pcl-1.14/pcl/filters/statistical_outlier_removal.h \
   /usr/include/pcl-1.14/pcl/for_each_type.h \
   /usr/include/pcl-1.14/pcl/impl/cloud_iterator.hpp \
   /usr/include/pcl-1.14/pcl/impl/point_types.hpp \
+  /usr/include/pcl-1.14/pcl/io/file_io.h \
+  /usr/include/pcl-1.14/pcl/io/ply/byte_order.h \
+  /usr/include/pcl-1.14/pcl/io/ply/io_operators.h \
+  /usr/include/pcl-1.14/pcl/io/ply/ply.h \
+  /usr/include/pcl-1.14/pcl/io/ply/ply_parser.h \
+  /usr/include/pcl-1.14/pcl/io/ply_io.h \
   /usr/include/pcl-1.14/pcl/kdtree/kdtree.h \
   /usr/include/pcl-1.14/pcl/kdtree/kdtree_flann.h \
   /usr/include/pcl-1.14/pcl/memory.h \

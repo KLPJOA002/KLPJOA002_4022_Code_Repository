@@ -616,7 +616,15 @@ since that combination cannot add detail.
 
 Two things also remove points after blending: `--fusion-min-scans` (drops
 surface too few scans agree on) and the outlier-removal pass
-(`--no-fusion-sor` to skip it). And if you go much denser, consider lowering
+(`--no-fusion-sor` to skip it).
+
+The outlier pass judges each point by its distance from a plane fitted to its
+30 nearest neighbours, dropping those more than 3 standard deviations above the
+mean. It deliberately does not use statistical outlier removal (mean distance
+to neighbours): that measures density, and a fused cloud's density is uneven by
+design. With a fusion cell finer than a single scan's point spacing (about
+1 mm here), areas seen by many scans come out denser than areas seen by a few,
+and SOR deleted the sparser ones wholesale, leaving holes in genuine overlap. And if you go much denser, consider lowering
 `--mls-radius` too — but keep it above your residual registration rmse, or the
 surface fit will smooth across genuine relief rather than across noise.
 

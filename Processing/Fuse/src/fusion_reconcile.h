@@ -105,9 +105,20 @@ struct ReconcileParams
     int   mls_polynomial_order = 2;
 
     // --- Final cleanup ----------------------------------------------------
+    // Removes points that sit off the local surface: each point is compared
+    // with a plane fitted to its nearest neighbours, and dropped if its
+    // distance from that plane is far above the cloud's typical figure.
+    //
+    // This deliberately does NOT use statistical outlier removal (mean
+    // distance to the k nearest neighbours). That measures *density*, and a
+    // fused cloud's density is uneven by construction - once the fusion cell
+    // is finer than a single scan's point spacing, areas seen by many scans
+    // come out denser than areas seen by a few. SOR then deletes the sparser
+    // areas wholesale, punching holes in genuine overlap. Distance from the
+    // local surface is the same however many points describe that surface.
     bool   run_outlier_removal = true;
-    int    sor_mean_k = 30;
-    double sor_stddev_mult = 1.0;
+    int    outlier_neighbours = 30;
+    double outlier_stddev_mult = 3.0;
 
     bool   estimate_normals = true;
     float  output_normal_radius = 0.015f;
