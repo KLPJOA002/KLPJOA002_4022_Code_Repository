@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 project(pointcloud_fusion)
 
+# Refuse in-source builds: they scatter CMakeCache.txt and generated Makefiles
+# (which hold absolute paths) through the source tree, and those break as soon
+# as the folder is copied or cloned somewhere else.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+    message(FATAL_ERROR "Build in a separate directory: mkdir build && cd build && cmake ..\n"
+                        "Delete the CMakeCache.txt and CMakeFiles/ just created in ${CMAKE_SOURCE_DIR}.")
+endif()
+
 # Default to an optimised build. A plain `cmake ..` otherwise compiles with no
 # optimisation at all, and PCL's registration code (ICP, correspondence search,
 # the point-to-plane solver) is header-only, so it is compiled here and inherits

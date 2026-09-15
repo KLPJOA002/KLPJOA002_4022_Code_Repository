@@ -1,0 +1,6 @@
+# CMake build output contains absolute paths from the machine that configured
+# it, so it must never be committed. Each machine creates its own.
+build/
+build-*/
+CMakeCache.txt
+CMakeFiles/

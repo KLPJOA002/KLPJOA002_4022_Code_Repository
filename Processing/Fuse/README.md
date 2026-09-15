@@ -67,6 +67,16 @@ code is compiled into this program and inherits its flags. Use
 build directory configured without a type switches to Release on the next
 `cmake ..`.
 
+The `build/` folder is not in git: CMake writes absolute paths into it, so every
+machine must create its own. If you copied or moved a build folder from another
+computer and get errors like *"CMakeCache.txt directory is different"* or
+*"source does not match the source used to generate cache"*, delete it and
+configure again:
+
+```bash
+rm -rf build && mkdir build && cd build && cmake .. && make -j$(nproc)
+```
+
 ## Input layout — session folders (recommended for your rig)
 
 ```
