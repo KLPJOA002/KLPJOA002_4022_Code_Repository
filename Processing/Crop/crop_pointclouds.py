@@ -38,6 +38,8 @@ How cropping works (two windows per file):
 """
 
 import argparse
+import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -62,6 +64,24 @@ class QuitAll(Exception):
 def find_ply_files(root: Path):
     """Return all .ply files under root, sorted for a predictable order."""
     return sorted(root.rglob("*.ply"))
+
+
+def copy_imu_file(ply_path: Path, out_dir: Path):
+    """Copy imu_a<x>.csv from the scan's folder, where <x> is the tilt value
+    in the folder name (e.g. ..._r135_a-10 -> imu_a-10.csv)."""
+    match = re.search(r"_a(-?\d+)$", ply_path.parent.name)
+    if not match:
+        print(f"    No tilt value in folder name '{ply_path.parent.name}', not copying IMU file.")
+        return
+
+    imu_path = ply_path.parent / f"imu_a{match.group(1)}.csv"
+    if not imu_path.is_file():
+        print(f"    No IMU file found ({imu_path.name}), skipping.")
+        return
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(imu_path, out_dir / imu_path.name)
+    print(f"    Copied IMU -> {out_dir / imu_path.name}")
 
 
 def write_ply_like_original(path: Path, pcd):
@@ -289,6 +309,7 @@ def main():
 
         if args.skip_existing and out_path.exists():
             print(f"[{i}/{len(ply_files)}] Skipping (already exists): {out_path}")
+            copy_imu_file(ply_path, out_path.parent)
             continue
 
         print(f"\n[{i}/{len(ply_files)}] Cropping: {rel_path}")
@@ -301,6 +322,7 @@ def main():
         out_path.parent.mkdir(parents=True, exist_ok=True)
         write_ply_like_original(out_path, cropped)
         print(f"    Saved -> {out_path}  ({len(cropped.points)} points)")
+        copy_imu_file(ply_path, out_path.parent)
 
     print("\nDone.")
 
