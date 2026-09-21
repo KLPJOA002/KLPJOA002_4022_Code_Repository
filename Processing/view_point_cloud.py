@@ -62,9 +62,9 @@ def height_colors(values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
     else:
         norm = np.clip((values - vmin) / (vmax - vmin), 0.0, 1.0)
     try:
-        import matplotlib.cm as cm
-        return cm.get_cmap("turbo")(norm)[:, :3]
-    except ImportError:
+        import matplotlib
+        return matplotlib.colormaps["turbo"](norm)[:, :3]
+    except (ImportError, AttributeError, KeyError):
         return _turbo_colormap(norm)
 
 

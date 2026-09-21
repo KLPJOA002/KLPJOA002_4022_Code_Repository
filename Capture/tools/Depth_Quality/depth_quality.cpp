@@ -33,6 +33,7 @@
 #include <ctime>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <cerrno>
 #include <cctype>
 #include <limits>
@@ -81,6 +82,13 @@ struct Options {
     cv::Rect    roi;
     double      roi_pct    = 40.0;
     bool        select_roi = false;
+    // Dynamic ROI: a patch_size x patch_size square that lies *in the target
+    // plane* is re-projected into the image each frame (0 = off = static ROI).
+    double      patch_size    = 0.0;
+    bool        patch_outer   = false;   // bounding box of the patch, not the inscribed box
+    double      patch_smooth  = 0.3;     // EMA weight of the newest plane estimate
+    int         patch_hyst_px = 3;       // ignore ROI moves smaller than this, in px
+    int         patch_min_px  = 8;       // never let the ROI shrink below this
 
     TrialSetup  setup;
 };
@@ -101,6 +109,13 @@ static void print_usage(const char* prog)
     "  -r, --roi X,Y,W,H      Explicit ROI\n"
     "      --roi-pct P        Centred ROI of P% width/height (default 40)\n"
     "      --select-roi       Draw the ROI with the mouse on the first frame\n"
+    "      --patch-size MM    Track a MM x MM square patch of the target plane:\n"
+    "                         the ROI is re-projected every frame so it always\n"
+    "                         covers that much floor (0 = off, static ROI)\n"
+    "      --patch-outer      Use the bounding box of the projected patch instead\n"
+    "                         of the largest box inscribed in it (default: inscribed)\n"
+    "      --patch-smooth A   EMA weight of the newest plane fit, 0..1 (default 0.3)\n"
+    "      --patch-hyst PX    Only move the ROI when it shifts by more than PX (default 3)\n"
     "\nCapture:\n"
     "  -D, --dir DIR          Output root (default ./dq_runs)\n"
     "  -d, --duration S       Seconds per trial (default: until q)\n"
@@ -338,6 +353,106 @@ static GroundTruth make_gt(const TrialSetup& s, double offset_mm)
     return g;
 }
 
+// ── Dynamic ROI: a square patch of the target plane ───────────────────────────
+// Given the target plane in the depth-camera frame (unit normal n, perpendicular
+// distance H_mm, so n · P = H_mm) this builds a patch_mm x patch_mm square that
+// *lies in that plane*, centred where anchor_ray pierces it, and projects the
+// square back into the depth image. The ROI is then the axis-aligned rectangle
+// that matches the projected quad.
+//
+// The upshot: the ROI grows as the camera drops towards the floor, shrinks as it
+// rises, and squashes vertically as the camera pitches — so the number of square
+// millimetres of floor being characterised stays constant at patch_mm^2.
+struct PatchROI {
+    bool        ok = false;
+    cv::Rect    rect;
+    cv::Point2f quad[4];                 // projected corners, for the overlay
+    double      centre_axis_mm = NaN;    // Z of the patch centre, for the overlay
+};
+
+// Convex quad (corners in order): p is inside when it is on the same side of
+// every edge.
+static bool point_in_quad(const cv::Point2f q[4], const cv::Point2f& p)
+{
+    int pos = 0, neg = 0;
+    for (int i = 0; i < 4; ++i) {
+        const cv::Point2f& a = q[i];
+        const cv::Point2f& b = q[(i + 1) % 4];
+        double cr = double(b.x - a.x) * (p.y - a.y) - double(b.y - a.y) * (p.x - a.x);
+        if      (cr > 0) ++pos;
+        else if (cr < 0) ++neg;
+    }
+    return pos == 0 || neg == 0;
+}
+
+static PatchROI project_patch(const rs2_intrinsics& intr, const cv::Vec3d& n, double H_mm,
+                              const cv::Vec3d& anchor_ray, double patch_mm, bool outer)
+{
+    PatchROI out;
+    if (!(patch_mm > 0) || !(H_mm > 0)) return out;
+
+    // 1. Patch centre: intersect the anchor ray with the plane.
+    //       P(t) = t * anchor_ray,   n · P = H   =>   t = H / (n · anchor_ray)
+    const double den = n.dot(anchor_ray);
+    if (den <= 1e-9) return out;              // ray parallel to, or facing away from, the plane
+    const cv::Vec3d C = anchor_ray * (H_mm / den);
+
+    // 2. Two orthonormal axes that span the plane. e1 is the camera's +x axis with
+    //    its out-of-plane component removed, so at zero roll the square's edges stay
+    //    parallel to the image rows; e2 = n x e1 then runs down-range in the plane.
+    cv::Vec3d e1 = cv::Vec3d(1, 0, 0) - n * n[0];
+    if (cv::norm(e1) < 1e-6) e1 = cv::Vec3d(0, 1, 0) - n * n[1];   // camera rolled ~90 deg
+    e1 = cv::normalize(e1);
+    const cv::Vec3d e2 = cv::normalize(n.cross(e1));
+
+    // 3. The four corners of the square, projected into the depth image.
+    const double h = 0.5 * patch_mm;
+    const cv::Vec3d corner[4] = { C - e1 * h - e2 * h, C + e1 * h - e2 * h,
+                                  C + e1 * h + e2 * h, C - e1 * h + e2 * h };
+    for (int i = 0; i < 4; ++i) {
+        if (corner[i][2] <= 1e-6) return out;                      // corner behind the camera
+        float p3[3] = {float(corner[i][0]), float(corner[i][1]), float(corner[i][2])};
+        float px[2];
+        rs2_project_point_to_pixel(px, &intr, p3);
+        if (!std::isfinite(px[0]) || !std::isfinite(px[1])) return out;
+        out.quad[i] = cv::Point2f(px[0], px[1]);
+    }
+    out.centre_axis_mm = C[2];
+
+    float min_u = out.quad[0].x, max_u = min_u, min_v = out.quad[0].y, max_v = min_v;
+    for (int i = 1; i < 4; ++i) {
+        min_u = std::min(min_u, out.quad[i].x); max_u = std::max(max_u, out.quad[i].x);
+        min_v = std::min(min_v, out.quad[i].y); max_v = std::max(max_v, out.quad[i].y);
+    }
+
+    // 4. Axis-aligned rectangle for that quad.
+    if (outer) {
+        // Smallest box that covers the whole patch (may include floor outside it).
+        out.rect = cv::Rect(cv::Point(int(std::floor(min_u)), int(std::floor(min_v))),
+                            cv::Point(int(std::ceil (max_u)), int(std::ceil (max_v))));
+    } else {
+        // Largest box centred on the patch centre that still fits *inside* the quad,
+        // so every ROI pixel is guaranteed to land on the patch. Bisect the scale of
+        // the bounding box until all four of its corners are inside.
+        float p3[3] = {float(C[0]), float(C[1]), float(C[2])}, cpx[2];
+        rs2_project_point_to_pixel(cpx, &intr, p3);
+        const float hw = 0.5f * (max_u - min_u), hh = 0.5f * (max_v - min_v);
+        float lo = 0.f, hi = 1.f;
+        for (int it = 0; it < 24; ++it) {
+            const float t = 0.5f * (lo + hi);
+            const cv::Point2f c[4] = {{cpx[0] - t * hw, cpx[1] - t * hh}, {cpx[0] + t * hw, cpx[1] - t * hh},
+                                      {cpx[0] + t * hw, cpx[1] + t * hh}, {cpx[0] - t * hw, cpx[1] + t * hh}};
+            bool in = true;
+            for (int k = 0; k < 4 && in; ++k) in = point_in_quad(out.quad, c[k]);
+            if (in) lo = t; else hi = t;
+        }
+        out.rect = cv::Rect(cv::Point(int(std::lround(cpx[0] - lo * hw)), int(std::lround(cpx[1] - lo * hh))),
+                            cv::Point(int(std::lround(cpx[0] + lo * hw)), int(std::lround(cpx[1] + lo * hh))));
+    }
+    out.ok = out.rect.width > 0 && out.rect.height > 0;
+    return out;
+}
+
 // ── Metrics ───────────────────────────────────────────────────────────────────
 struct FrameMetrics {
     long long frame = 0;
@@ -427,12 +542,17 @@ public:
         set_roi(roi_);
     }
 
-    void set_roi(const cv::Rect& r)
+    // reset_stats = false keeps the per-pixel temporal accumulators alive. That is
+    // what the dynamic-ROI path needs: the ROI is nudged by a few pixels as the
+    // camera moves and wiping the history every time would leave the temporal-noise
+    // figure undefined. Pixels that only enter the ROI late are dropped anyway by
+    // the min_count filter in temporal_noise_median_mm().
+    void set_roi(const cv::Rect& r, bool reset_stats = true)
     {
         roi_ = r & cv::Rect(0, 0, intr_.width, intr_.height);
         err_mm_.create(std::max(roi_.height, 1), std::max(roi_.width, 1), CV_32F);
         err_mm_.setTo(NaN);
-        reset_temporal();
+        if (reset_stats) reset_temporal();
     }
 
     void set_gt(const GroundTruth& g) { gt_ = g; }
@@ -444,12 +564,14 @@ public:
         std::fill(tn_count_.begin(), tn_count_.end(), 0);
     }
 
-    const cv::Rect& roi()       const { return roi_; }
-    const cv::Mat&  error_map() const { return err_mm_; }
+    const cv::Rect& roi()          const { return roi_; }
+    const cv::Mat&  error_map()    const { return err_mm_; }
+    const Plane&    fitted_plane() const { return plane_; }   // last fit, for the dynamic ROI
 
     FrameMetrics analyze(const rs2::depth_frame& depth)
     {
         FrameMetrics m;
+        plane_   = Plane{};
         m.roi    = roi_;
         m.roi_px = roi_.area();
         const int w = depth.get_width(), h = depth.get_height();
@@ -483,6 +605,7 @@ public:
 
         // ── Plane fit metrics (Depth-Quality-Tool style) ────────────────────
         Plane p = fit_plane(samples_);
+        plane_ = p;
         if (p.ok) {
             const double fB = intr_.fx * baseline_mm_;
             double ss = 0, ss_sub = 0; int n_sub = 0;
@@ -577,6 +700,7 @@ private:
     double                   scale_mm_ = 0.1, baseline_mm_ = 0;
     std::vector<cv::Vec3d>   rays_;
     cv::Rect                 roi_;
+    Plane                    plane_;
     GroundTruth              gt_;
     cv::Mat                  err_mm_;
     std::vector<PixelSample> samples_;
@@ -767,7 +891,8 @@ static bool prompt_next_trial(Options& o)
     std::cout << "\n" << std::string(60, '-') << "\n"
               << "Adjust the rig / lighting, then enter any changes as key=value pairs:\n"
               << "  h=<mm> z=<mm> pitch=<deg> roll=<deg> lux=<val> label=<text> gt=none\n"
-              << "  roi=x,y,w,h | roi=select   emitter=on|off   laser=<mW>   exposure=auto|<us>\n"
+              << "  roi=x,y,w,h | roi=select   patch=<mm>|off\n"
+              << "  emitter=on|off   laser=<mW>   exposure=auto|<us>\n"
               << "Enter = repeat with the same settings, q = finish.\n> " << std::flush;
     std::string line;
     if (!std::getline(std::cin, line) || !g_running) return false;
@@ -793,6 +918,7 @@ static bool prompt_next_trial(Options& o)
                 else if (parse_roi(v, o.roi)) { o.roi_given = true; o.select_roi = false; }
                 else std::cerr << "  bad roi '" << v << "'\n";
             }
+            else if (k == "patch")    o.patch_size = (v == "off") ? 0.0 : std::max(0.0, std::stod(v));
             else if (k == "emitter")  o.emitter = (v == "on") ? 1 : 0;
             else if (k == "laser")    o.laser_power = std::stof(v);
             else if (k == "exposure") o.exposure_us = (v == "auto") ? -1.0f : std::stof(v);
@@ -829,6 +955,10 @@ int main(int argc, char* argv[])
             }
             else if (arg == "--roi-pct")                  o.roi_pct = std::stod(next());
             else if (arg == "--select-roi")               o.select_roi = true;
+            else if (arg == "--patch-size")               o.patch_size = std::max(0.0, std::stod(next()));
+            else if (arg == "--patch-outer")              o.patch_outer = true;
+            else if (arg == "--patch-smooth")             o.patch_smooth = std::clamp(std::stod(next()), 0.01, 1.0);
+            else if (arg == "--patch-hyst")               o.patch_hyst_px = std::max(0, std::stoi(next()));
             else if (arg == "-D" || arg == "--dir")       o.output_dir = next();
             else if (arg == "-d" || arg == "--duration")  o.duration_sec = std::stoi(next());
             else if (arg == "-n" || arg == "--frames")    o.frame_limit  = std::stoll(next());
@@ -928,6 +1058,32 @@ int main(int argc, char* argv[])
         const GroundTruth gt = make_gt(o.setup, o.gt_offset_mm);
         analyzer.set_gt(gt);
 
+        // ── Dynamic-ROI state ─────────────────────────────────────────────────
+        // The patch stays centred on the ray through the centre of the ROI this
+        // trial started with, so -r / --select-roi still choose *where* to look and
+        // --patch-size chooses *how much floor* is looked at.
+        auto ray_through = [&intr](const cv::Rect& r) {
+            float px[2] = {float(r.x + 0.5 * r.width), float(r.y + 0.5 * r.height)};
+            float pt[3];
+            rs2_deproject_pixel_to_point(pt, &intr, px, 1.0f);
+            return cv::Vec3d(pt[0], pt[1], pt[2]);
+        };
+        cv::Vec3d anchor_ray = ray_through(roi);
+        cv::Vec3d plane_n    = gt.n;                  // running plane estimate (EMA)
+        double    plane_H    = gt.valid ? gt.H_mm : 0.0;
+        bool      plane_seen = gt.valid;
+        PatchROI  patch;
+
+        // Seed the ROI from the ground-truth plane so frame 0 is already the right
+        // size; without ground truth it starts static and snaps in after frame 0.
+        if (o.patch_size > 0 && plane_seen) {
+            PatchROI seed = project_patch(intr, plane_n, plane_H, anchor_ray, o.patch_size, o.patch_outer);
+            cv::Rect r    = seed.rect & cv::Rect(0, 0, intr.width, intr.height);
+            if (seed.ok && r.width >= o.patch_min_px && r.height >= o.patch_min_px) {
+                patch = seed; roi = r; analyzer.set_roi(roi);
+            }
+        }
+
         auto info = [&](rs2_camera_info k) -> std::string {
             try { return dev.supports(k) ? dev.get_info(k) : "?"; } catch (...) { return "?"; }
         };
@@ -942,6 +1098,11 @@ int main(int argc, char* argv[])
                   << "Baseline: " << fmt(baseline, 2) << " mm   fx " << fmt(intr.fx, 2) << " px\n"
                   << "ROI     : x=" << roi.x << " y=" << roi.y << " w=" << roi.width << " h=" << roi.height
                   << (o.select_roi ? "  (will be selected on first frame)" : "") << "\n"
+                  << (o.patch_size > 0
+                        ? "Patch   : " + fmt(o.patch_size, 0) + " mm square on the target plane, "
+                          + (o.patch_outer ? "bounding" : "inscribed") + " ROI, tracked every frame"
+                          + (plane_seen ? "" : "  (waiting for the first plane fit)") + "\n"
+                        : std::string())
                   << "Truth   : " << (gt.valid
                         ? "perp " + fmt(gt.H_mm, 1) + " mm, axis " + fmt(gt.axis_mm, 1) + " mm, pitch "
                           + fmt(gt.pitch_deg, 2) + ", roll " + fmt(gt.roll_deg, 2)
@@ -1004,6 +1165,8 @@ int main(int argc, char* argv[])
                 if (sel.area() > 0) {
                     analyzer.set_roi(sel);
                     o.roi = analyzer.roi(); o.roi_given = true;
+                    anchor_ray = ray_through(o.roi);   // re-anchor the tracked patch
+                    patch = PatchROI{};
                     history.clear();
                     std::cout << "ROI set to x=" << o.roi.x << " y=" << o.roi.y
                               << " w=" << o.roi.width << " h=" << o.roi.height
@@ -1050,6 +1213,10 @@ int main(int argc, char* argv[])
             // ── Display ───────────────────────────────────────────────────────
             const cv::Rect& r = analyzer.roi();
             cv::rectangle(ir_bgr, r, cv::Scalar(0, 255, 0), 2);
+            if (o.patch_size > 0 && patch.ok)           // the square patch itself, in amber
+                for (int i = 0; i < 4; ++i)
+                    cv::line(ir_bgr, patch.quad[i], patch.quad[(i + 1) % 4],
+                             cv::Scalar(0, 200, 255), 1, cv::LINE_AA);
             std::vector<std::string> lines = {
                 "Trial " + std::to_string(trial_index) + "  frame " + std::to_string(frame_count)
                     + (o.setup.label.empty() ? "" : "  [" + o.setup.label + "]"),
@@ -1067,6 +1234,11 @@ int main(int argc, char* argv[])
                 lines.push_back("Fit: axis " + fmt(m.plane_dist_axis_mm, 1) + " mm  pitch "
                                 + fmt(m.plane_pitch_deg, 2) + "  roll " + fmt(m.plane_roll_deg, 2));
             }
+            if (o.patch_size > 0)
+                lines.push_back("Patch " + fmt(o.patch_size, 0) + " mm -> ROI "
+                                + std::to_string(r.width) + "x" + std::to_string(r.height) + " px"
+                                + (patch.ok ? "  @ " + fmt(patch.centre_axis_mm, 0) + " mm"
+                                            : std::string("  (no plane yet)")));
             lines.push_back("IR mean " + fmt(m.ir_mean, 1) + "   exposure " + fmt(m.exposure, 0));
             draw_text_block(ir_bgr, lines, cv::Point(15, 30));
 
@@ -1099,6 +1271,47 @@ int main(int argc, char* argv[])
                 std::cout << "Saved snapshot " << base << "_*.png\n";
             }
 
+            // ── Dynamic ROI: re-project the patch for the next frame ─────────
+            // Plane estimate comes from this frame's own fit (so it follows the
+            // floor as the scan moves); ground truth is only the fallback.
+            if (o.patch_size > 0) {
+                cv::Vec3d n_meas(0, 0, 1);
+                double    H_meas = 0.0;
+                bool      have   = false;
+                if (m.plane_ok) {
+                    const Plane& pf = analyzer.fitted_plane();
+                    n_meas = cv::normalize(cv::Vec3d(pf.a, pf.b, pf.c));
+                    H_meas = -pf.d;                     // perpendicular distance, mm
+                    have   = H_meas > 0;
+                } else if (gt.valid) {
+                    n_meas = gt.n; H_meas = gt.H_mm; have = true;
+                }
+
+                if (have) {
+                    if (!plane_seen) { plane_n = n_meas; plane_H = H_meas; plane_seen = true; }
+                    else {                              // EMA, so the ROI does not jitter
+                        const double a = o.patch_smooth;
+                        plane_n = cv::normalize(plane_n * (1.0 - a) + n_meas * a);
+                        plane_H = plane_H * (1.0 - a) + H_meas * a;
+                    }
+
+                    PatchROI np = project_patch(intr, plane_n, plane_H, anchor_ray,
+                                                o.patch_size, o.patch_outer);
+                    cv::Rect nr = np.rect & cv::Rect(0, 0, intr.width, intr.height);
+                    if (np.ok && nr.width >= o.patch_min_px && nr.height >= o.patch_min_px) {
+                        patch = np;
+                        const cv::Rect& cur = analyzer.roi();
+                        const int moved = std::max(std::max(std::abs(nr.x - cur.x), std::abs(nr.y - cur.y)),
+                                                   std::max(std::abs(nr.width  - cur.width),
+                                                            std::abs(nr.height - cur.height)));
+                        // Hysteresis: a sub-pixel wobble in the plane fit should not
+                        // resize the ROI (and reallocate the error map) every frame.
+                        if (moved > o.patch_hyst_px)
+                            analyzer.set_roi(nr, /*reset_stats=*/false);
+                    }
+                }
+            }
+
             ++frame_count;
         } // end frame loop
 
@@ -1113,8 +1326,20 @@ int main(int argc, char* argv[])
         const cv::Rect& r     = analyzer.roi();
 
         std::ostringstream sum;
-        sum << "Frames (since last ROI change): " << n_frames << "\n"
+        sum << (o.patch_size > 0 ? "Frames: " : "Frames (since last ROI change): ") << n_frames << "\n"
             << "Duration: " << fmt(elapsed, 2) << " s\n";
+        if (o.patch_size > 0 && n_frames > 0) {
+            int wmin = std::numeric_limits<int>::max(), wmax = 0;
+            int hmin = std::numeric_limits<int>::max(), hmax = 0;
+            for (const auto& f : history) {
+                wmin = std::min(wmin, f.roi.width);  wmax = std::max(wmax, f.roi.width);
+                hmin = std::min(hmin, f.roi.height); hmax = std::max(hmax, f.roi.height);
+            }
+            sum << "Patch: " << fmt(o.patch_size, 0) << " mm square ("
+                << (o.patch_outer ? "bounding" : "inscribed") << ") -> ROI width "
+                << wmin << ".." << wmax << " px, height " << hmin << ".." << hmax
+                << " px over the trial (per-frame ROI is in the metrics CSV)\n";
+        }
         for (const auto& f : SUMMARY_FIELDS) {
             Stat s = stat_of(history, f.field);
             sum << "  " << std::left << std::setw(20) << f.name << std::right
@@ -1142,7 +1367,11 @@ int main(int argc, char* argv[])
               << "preset: "       << o.preset << "\nfilters: " << o.use_filters << "\n"
               << "emitter_set: "  << o.emitter << "\nlaser_power_set: " << o.laser_power
               << "\nexposure_set_us: " << o.exposure_us << "\n"
-              << "roi: "          << r.x << "," << r.y << "," << r.width << "," << r.height << "\n"
+              << "roi: "          << r.x << "," << r.y << "," << r.width << "," << r.height
+              << (o.patch_size > 0 ? "   (last frame; ROI is tracked)" : "") << "\n"
+              << "patch_size_mm: " << o.patch_size << "   (0 = static ROI)\n"
+              << "patch_roi_mode: " << (o.patch_size > 0 ? (o.patch_outer ? "outer" : "inner") : "n/a")
+              << "\npatch_smooth: " << o.patch_smooth << "\npatch_hyst_px: " << o.patch_hyst_px << "\n"
               << "record: "       << record_file << "\n\n" << sum.str();
         }
 
@@ -1153,7 +1382,7 @@ int main(int argc, char* argv[])
             if (new_file) {
                 f << "trial,name,label,height_mm,axis_dist_mm,pitch_deg,roll_deg,lux,gt_offset_mm,"
                      "gt_perp_mm,gt_axis_mm,preset,filters,emitter_set,laser_power_set,exposure_set_us,"
-                     "width,height,fps,roi_x,roi_y,roi_w,roi_h,frames,temporal_noise_mm";
+                     "width,height,fps,roi_x,roi_y,roi_w,roi_h,patch_size_mm,frames,temporal_noise_mm";
                 for (const auto& fl : SUMMARY_FIELDS) f << "," << fl.name << "_mean," << fl.name << "_std";
                 f << "\n";
             }
@@ -1169,8 +1398,9 @@ int main(int argc, char* argv[])
             f << o.preset << "," << o.use_filters << "," << o.emitter << ","
               << o.laser_power << "," << o.exposure_us << ","
               << intr.width << "," << intr.height << "," << o.fps << ","
-              << r.x << "," << r.y << "," << r.width << "," << r.height << ","
-              << n_frames << ",";
+              << r.x << "," << r.y << "," << r.width << "," << r.height << ",";
+            csv_num(f, o.patch_size, 2);  f << ",";
+            f << n_frames << ",";
             csv_num(f, tnoise, 4);
             for (const auto& fl : SUMMARY_FIELDS) {
                 Stat s = stat_of(history, fl.field);

@@ -44,8 +44,8 @@ struct DepthFilters {
 
     DepthFilters()
     {
-        threshold.set_option(RS2_OPTION_MIN_DISTANCE,0.4f);
-        threshold.set_option(RS2_OPTION_MAX_DISTANCE,0.7f);
+        threshold.set_option(RS2_OPTION_MIN_DISTANCE,0.1f);
+        threshold.set_option(RS2_OPTION_MAX_DISTANCE,1.0f);
 
         spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f); // Spatial filter over small history
         spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f); //threshold for disable low
