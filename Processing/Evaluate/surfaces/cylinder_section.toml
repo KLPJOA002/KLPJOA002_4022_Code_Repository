@@ -1,0 +1,26 @@
+# Parametric surface (x, y, z) = S(u, v): a 120-degree section of a cylinder
+# lying along x, with a gentle axial wave so it is not perfectly degenerate
+# along the axis. Shows the parametric form - this surface is not a height
+# field of anything you would naturally write as z = f(x, y).
+
+name  = "wavy-cylinder-section"
+type  = "parametric"
+units = "mm"
+visible_from = "+z"
+
+[params]
+R = 30.0     # radius
+w = 1.5      # axial wave amplitude
+P = 40.0     # axial wave period
+
+[surface]
+x = "u"
+y = "(R + w*sin(2*pi*u/P)) * sin(v)"
+z = "(R + w*sin(2*pi*u/P)) * cos(v)"
+
+[domain]
+u = [0.0, 80.0]              # along the axis, mm
+v = [-1.0472, 1.0472]        # angle, radians (+-60 degrees)
+
+[export]
+resolution = 0.3

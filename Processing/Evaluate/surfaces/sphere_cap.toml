@@ -1,0 +1,22 @@
+# Spherical cap as a height field with a circular domain. Note the mask:
+# sqrt(R^2 - x^2 - y^2) is undefined outside the base circle, and the loader
+# refuses a domain on which the expression is undefined.
+
+name  = "sphere-cap-r50"
+type  = "height_field"
+units = "mm"
+
+[params]
+R = 50.0     # sphere radius
+a = 35.0     # radius of the cap's base circle
+
+[surface]
+z = "sqrt(R**2 - x**2 - y**2) - sqrt(R**2 - a**2)"
+
+[domain]
+x    = [-35.0, 35.0]
+y    = [-35.0, 35.0]
+mask = "x**2 + y**2 <= a**2"
+
+[export]
+resolution = 0.3

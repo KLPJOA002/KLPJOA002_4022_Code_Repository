@@ -1,0 +1,28 @@
+# Sinusoidal "egg-carton" test surface - a height field z = f(x, y).
+# These parameters match Egg-carton-smaller3cm.ply: 100 x 100 mm, two periods
+# of 50 mm each way, 30 mm peak to peak about z = 25 mm (the base plate below
+# it is not part of the scanned surface).
+#
+# Evaluate against it:   evaluate_scans.py --reference-def surfaces/egg_carton.toml scan.ply
+# Print it:              evaluate_scans.py --reference-def surfaces/egg_carton.toml --export egg.stl
+
+name        = "egg-carton-3cm"
+type        = "height_field"
+units       = "mm"
+description = "z = c - A sin(2 pi x / L) cos(2 pi y / L), two periods each way"
+
+[params]
+A = 15.0     # amplitude (half of peak-to-peak)
+L = 50.0     # wavelength
+c = 25.0     # mean height above the base
+
+[surface]
+z = "c - A*sin(2*pi*x/L)*cos(2*pi*y/L)"
+
+[domain]
+x = [0.0, 100.0]
+y = [0.0, 100.0]
+
+[export]
+resolution = 0.5    # mm, largest vertex spacing (chord error ~3 um)
+base_z     = 0.0    # closed solid down to z = 0, ready to slice

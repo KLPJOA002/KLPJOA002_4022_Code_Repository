@@ -1,0 +1,22 @@
+# Implicit surface F(x, y, z) = 0: the upper half of a torus, cut by the
+# [domain] box. F < 0 inside the solid, so +grad F points outward.
+
+name  = "half-torus"
+type  = "implicit"
+units = "mm"
+visible_from = "+z"
+
+[params]
+Rmaj = 40.0   # centre of the tube to centre of the torus
+rmin = 12.0   # tube radius
+
+[surface]
+F = "(sqrt(x**2 + y**2) - Rmaj)**2 + z**2 - rmin**2"
+
+[domain]
+x = [-53.0, 53.0]
+y = [-53.0, 53.0]
+z = [0.0, 13.0]
+
+[export]
+resolution = 0.5

@@ -1,0 +1,22 @@
+# Circular paraboloid dish - a height field that is rotationally symmetric,
+# so alignment can never recover rotation about z. The degeneracy check is
+# expected to report exactly that.
+
+name  = "paraboloid-r40"
+type  = "height_field"
+units = "mm"
+
+[params]
+R = 40.0     # radius of the rim
+H = 20.0     # depth at the centre
+
+[surface]
+z = "H * (x**2 + y**2) / R**2"
+
+[domain]
+x    = [-40.0, 40.0]
+y    = [-40.0, 40.0]
+mask = "x**2 + y**2 <= R**2"     # circular outline
+
+[export]
+resolution = 0.3

@@ -1,0 +1,38 @@
+# Evaluation settings - edit and re-run. Load with:
+#   evaluate_scans.py --config eval_config.example.toml scans/
+#
+# Any value here can still be overridden per run with the matching flag
+# (--thresholds, --coverage-radius, ...), which always wins over this file.
+# Keys may sit at the top level or in sections; unknown keys are an error.
+# All distances are millimetres.
+
+# What to compare against (instead of --reference / --reference-def).
+reference_def = "surfaces/egg_carton_3cm_mesh.toml"
+
+seed   = 0
+output = "evaluation_out"
+# label = "d435_close_fuse_heightfield"
+
+[units]
+units = "m"            # the scan PLYs: RealSense and Fuse output are metres
+scale = 1.0            # extra factor on the scans; scale is never estimated...
+allow_scale = false    # ...unless this is true (similarity alignment)
+
+[alignment]
+align            = "full"   # full | refine | none
+align_voxel_mm   = 0.0      # 0 = reference diagonal / 60
+eval_distance_mm = 0.0      # 0 = 3 x voxel
+ransac_starts    = 5
+perturb          = true     # quarter turns / flip / slides around the best pose
+ambiguous_margin = 0.15     # Fuse's default
+sensor_origin    = "0,0,0"  # camera position in the scan frame (mm), or "none"
+
+[metrics]
+thresholds_mm       = [0.5, 1.0, 2.0, 5.0]
+outlier_distance_mm = 5.0
+coverage_radius_mm  = 10.0
+# Negative insets the outline, e.g. -2 to ignore the rim where the scan sees
+# the part's side walls (which an open analytic surface does not have).
+region_margin_mm    = 0.0
+trim_percent        = [1.0, 5.0]
+reference_samples   = 200000

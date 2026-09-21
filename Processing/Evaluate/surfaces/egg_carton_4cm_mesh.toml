@@ -1,0 +1,5 @@
+name         = "egg-carton-4cm-mesh"
+type         = "mesh"
+units        = "mm"
+path         = "../../Fused_Scans/Egg-carton-bigger-4cm.ply"
+height_field = true

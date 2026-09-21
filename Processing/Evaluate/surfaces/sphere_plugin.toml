@@ -1,0 +1,13 @@
+# A reference implemented in Python rather than an expression: see
+# plugins/sphere_cap_plugin.py. Everything under [params] is passed to the
+# class constructor as keyword arguments.
+
+name  = "sphere-cap-plugin"
+type  = "plugin"
+units = "mm"
+path  = "plugins/sphere_cap_plugin.py"
+class = "SphereCap"
+
+[params]
+radius      = 50.0
+base_radius = 35.0

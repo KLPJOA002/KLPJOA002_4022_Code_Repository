@@ -1,0 +1,10 @@
+# The real printed part's CAD mesh, with the metadata a bare .ply cannot carry.
+# height_field = true: the top is z = h(x, y), so Z-error stats are reported,
+# the region is the part's outline seen from above, and only upward-facing
+# surface (not the base or the underside) counts toward completeness.
+
+name         = "egg-carton-3cm-mesh"
+type         = "mesh"
+units        = "mm"
+path         = "../../Fused_Scans/Egg-carton-smaller3cm.ply"
+height_field = true
