@@ -2,6 +2,7 @@ Capture/Recordings/
 Capture/tools/Depth_Quality/dq_runs/
 Processing/Fused_Scans/
 Processing/Cropped_Scans/
+Processing/Crop/cropper/
 Processing/Height_Analysis/.venv/
 Processing/Height_Analysis/Plots/
 Processing/Viewer/
