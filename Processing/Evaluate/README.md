@@ -199,6 +199,7 @@ exactly onto F = 0.
 --allow-scale                         # similarity alignment; reports the recovered scale
 --thresholds 0.25,0.5,1,2             # F-score / completeness thresholds, mm
 --region-margin -2                    # inset the outline 2 mm (see "region" below)
+--no-overlay  --overlay-samples 50000 # skip overlay.ply, or draw fewer reference points
 --config eval_config.example.toml     # baseline settings; flags override
 --list-only                           # show which scans would be evaluated
 ```
@@ -341,6 +342,14 @@ evaluation_out/
     aligned_error.ply          aligned scan coloured by signed error (blue below, grey ~0,
                                red above; dark grey = not over the part), plus the error
                                as a scalar field `error_mm` for CloudCompare/MeshLab
+    overlay.ply                the reference and the aligned scan in one cloud: orange is
+                               the reference surface, blue the scan over it, grey the scan
+                               elsewhere (table, other parts). Open it to check the
+                               alignment and that this was the right reference - well
+                               aligned, the blue sits on the orange and hides it; a shifted
+                               pose or the wrong part shows orange peaks beside blue ones.
+                               The scalar field `source` (0 reference, 1 scan, 2 scan
+                               outside the part) separates them in a viewer
     error_histogram.png        signed error with bias and ±1 std
     error_map.png              top-down for height fields (plus a Z-error panel), otherwise
                                projected onto the best-fit plane

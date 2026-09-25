@@ -649,7 +649,9 @@ int main(int argc, char* argv[])
                     y += 22;
                 }
 
-                cv::imshow("AprilTag ID scanner (36h11)", color_bgr); //display the colour frame
+                cv::namedWindow("AprilTag ID scanner (36h11)", cv::WINDOW_NORMAL);
+                cv::resizeWindow("AprilTag ID scanner (36h11)", 1280, 720);
+                cv::imshow("AprilTag ID scanner (36h11)", color_bgr);
                 if (cv::waitKey(1) == 'q') break;
 
             // ─────────────────────────────────────────────────────────────────

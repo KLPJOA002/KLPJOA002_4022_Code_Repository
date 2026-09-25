@@ -137,6 +137,10 @@ def build_parser():
                    help="don't write the error-coloured aligned PLY")
     o.add_argument("--no-plots", action="store_false", dest="write_plots", default=None,
                    help="don't write the histogram / error map")
+    o.add_argument("--no-overlay", action="store_false", dest="write_overlay", default=None,
+                   help="don't write overlay.ply (reference + aligned scan in one cloud)")
+    o.add_argument("--overlay-samples", type=int,
+                   help="reference points drawn in overlay.ply (default 150000)")
     o.add_argument("--export", metavar="PATH",
                    help="export the reference to .stl/.ply/.obj (in its own units) and exit")
     o.add_argument("--export-resolution", type=float, metavar="R",

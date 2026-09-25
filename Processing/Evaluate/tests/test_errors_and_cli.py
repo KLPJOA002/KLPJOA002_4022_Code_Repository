@@ -140,9 +140,16 @@ def test_cli_end_to_end(tmp_path, egg):
             "--reference-samples", "40000", "--label", "synthetic"]
     assert evaluate_scans.main(base + [str(tmp_path / "scans")]) == 0
     run = out / "synthetic__scan0"
-    for name in ("metrics.json", "transform.txt", "aligned_error.ply", "error_histogram.png",
-                 "error_map.png", "run.log"):
+    for name in ("metrics.json", "transform.txt", "aligned_error.ply", "overlay.ply",
+                 "error_histogram.png", "error_map.png", "run.log"):
         assert (run / name).is_file(), name
+    # The overlay holds the reference and the scan, separable by colour.
+    overlay = o3d.io.read_point_cloud(str(run / "overlay.ply"))
+    colours = np.unique((np.asarray(overlay.colors) * 255).round().astype(int), axis=0)
+    from scan_eval.report import REFERENCE_RGB, SCAN_RGB
+    for rgb in (REFERENCE_RGB, SCAN_RGB):
+        assert any(np.array_equal(c, rgb) for c in colours), rgb
+    assert len(overlay.points) > len(o3d.io.read_point_cloud(str(scans[0])).points)
     doc = json.loads((run / "metrics.json").read_text())
     assert doc["metrics"]["acc_rmse_mm"] == pytest.approx(0.2, rel=0.1)
     assert doc["reference"]["definition_hash"] == egg.definition_hash

@@ -15,7 +15,7 @@ from .metrics import compute_metrics
 from .reference import unit_factor
 from .registration import align, apply, print_alignment_report
 from .report import (append_results, plot_error_map, plot_histogram, safe_name,
-                     write_error_ply, write_json)
+                     write_error_ply, write_json, write_overlay_ply)
 
 o3d.utility.set_verbosity_level(o3d.utility.VerbosityLevel.Error)
 
@@ -142,6 +142,14 @@ def evaluate_scan(ref, scan_path, params, out_root, run_name, init_transform=Non
         if params.write_ply:
             lim = write_error_ply(run_dir / "aligned_error.ply", aligned, per_point["signed"], region)
             log(f"[write] aligned_error.ply (colour range +-{lim:.3f} mm; grey = not over the part)")
+        if params.write_overlay:
+            # Sampled with its own seed, so the overlay never shows exactly the
+            # points the metrics were computed from.
+            rp, rn = ref.sample(params.overlay_samples, params.seed + 2)
+            rp = rp[ref.visible_mask(rp, rn)]
+            n_ref = write_overlay_ply(run_dir / "overlay.ply", aligned, region, rp, ref.name)
+            log(f"[write] overlay.ply ({n_ref} reference points in orange, the aligned scan in "
+                "blue over the part and grey elsewhere)")
         if params.write_plots:
             plot_histogram(run_dir / "error_histogram.png", signed_mm, metrics, title)
             z = per_point["z_error"]

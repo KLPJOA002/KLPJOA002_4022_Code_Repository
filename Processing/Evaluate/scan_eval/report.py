@@ -6,6 +6,8 @@
                                        --init-transform to reproduce the run
     <output>/<run>/aligned_error.ply   aligned scan coloured by signed error, with
                                        the error as a scalar property
+    <output>/<run>/overlay.ply         the reference and the aligned scan in one cloud,
+                                       to eyeball the alignment and the choice of reference
     <output>/<run>/error_histogram.png
     <output>/<run>/error_map.png
     <output>/<run>/run.log             console output of this scan's evaluation
@@ -34,6 +36,11 @@ BLUE, RED, NEUTRAL = "#2a78d6", "#e34948", "#c9c8c3"
 SURFACE, INK, INK_2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
 ERROR_CMAP = LinearSegmentedColormap.from_list("signed_error", [BLUE, NEUTRAL, RED])
 OUTSIDE_RGB = (110, 110, 110)
+
+# Overlay: blue and orange stay distinguishable to every kind of colour
+# vision, and on both a black and a white viewer background.
+SCAN_RGB = (42, 120, 214)
+REFERENCE_RGB = (232, 135, 26)
 
 # Columns that lead every results.csv row, in this order; all other metrics
 # follow alphabetically.
@@ -68,10 +75,35 @@ def error_limit(signed_mm: np.ndarray) -> float:
     return float(max(np.percentile(np.abs(signed_mm), 98), 1e-3))
 
 
+_PLY_TYPES = {"<f4": "float", "u1": "uchar"}
+
+
+def write_points_ply(path, points, rgb, comment, extra=()):
+    """Binary PLY of xyz + colour, plus any extra per-point scalar fields as
+    (name, dtype, values). Written here rather than through Open3D because the
+    scalar fields are the point: CloudCompare and MeshLab can colour, filter
+    and threshold on them."""
+    fields = [("x", "<f4"), ("y", "<f4"), ("z", "<f4"),
+              ("red", "u1"), ("green", "u1"), ("blue", "u1")]
+    fields += [(name, dtype) for name, dtype, _ in extra]
+    rec = np.empty(len(points), dtype=fields)
+    rec["x"], rec["y"], rec["z"] = points[:, 0], points[:, 1], points[:, 2]
+    rec["red"], rec["green"], rec["blue"] = rgb[:, 0], rgb[:, 1], rgb[:, 2]
+    for name, _, values in extra:
+        rec[name] = values
+    header = ["ply", "format binary_little_endian 1.0"]
+    header += [f"comment {line}" for line in comment.splitlines()]
+    header.append(f"element vertex {len(points)}")
+    header += [f"property {_PLY_TYPES[dtype]} {name}" for name, dtype in fields]
+    header.append("end_header")
+    with open(path, "wb") as fh:
+        fh.write(("\n".join(header) + "\n").encode("ascii"))
+        fh.write(rec.tobytes())
+
+
 def write_error_ply(path, points, signed_m, region):
-    """Binary PLY: xyz, rgb heatmap, and 'error_mm' (signed; NaN off the part)
-    plus 'scored' (1 if the point was over the part) as scalar fields, which
-    CloudCompare/MeshLab can re-colour however you like."""
+    """The aligned scan coloured by signed error, carrying 'error_mm' (NaN off
+    the part) and 'scored' (1 if the point was over the part)."""
     n = len(points)
     err = np.full(n, np.nan, dtype=np.float32)
     err[region] = signed_m * 1e3
@@ -79,21 +111,35 @@ def write_error_ply(path, points, signed_m, region):
     rgb = np.tile(np.array(OUTSIDE_RGB, np.uint8), (n, 1))
     if region.any():
         rgb[region] = (ERROR_CMAP(np.clip(err[region] / lim * 0.5 + 0.5, 0, 1))[:, :3] * 255).astype(np.uint8)
-    rec = np.empty(n, dtype=[("x", "<f4"), ("y", "<f4"), ("z", "<f4"), ("red", "u1"), ("green", "u1"),
-                             ("blue", "u1"), ("error_mm", "<f4"), ("scored", "u1")])
-    rec["x"], rec["y"], rec["z"] = points[:, 0], points[:, 1], points[:, 2]
-    rec["red"], rec["green"], rec["blue"] = rgb[:, 0], rgb[:, 1], rgb[:, 2]
-    rec["error_mm"] = err
-    rec["scored"] = region.astype(np.uint8)
-    header = ("ply\nformat binary_little_endian 1.0\n"
-              f"comment scan_eval aligned scan, metres, reference frame; colour range +-{lim:.3f} mm\n"
-              f"element vertex {n}\nproperty float x\nproperty float y\nproperty float z\n"
-              "property uchar red\nproperty uchar green\nproperty uchar blue\n"
-              "property float error_mm\nproperty uchar scored\nend_header\n")
-    with open(path, "wb") as fh:
-        fh.write(header.encode("ascii"))
-        fh.write(rec.tobytes())
+    write_points_ply(path, points, rgb,
+                     f"scan_eval aligned scan, metres, reference frame; colour range +-{lim:.3f} mm",
+                     extra=[("error_mm", "<f4", err), ("scored", "u1", region.astype(np.uint8))])
     return lim
+
+
+def write_overlay_ply(path, scan_points, region, reference_points, reference_name):
+    """The reference and the aligned scan in one cloud, to check by eye that
+    the alignment is right and that this was the right reference.
+
+    Orange is the reference surface, blue the scan over it, grey the scan
+    points outside the part (table, other objects). Well aligned, the blue
+    sits on the orange and hides it; a shifted or wrong-part alignment shows
+    up as orange peaks beside blue ones. 'source' separates the three in a
+    viewer: 0 reference, 1 scan (scored), 2 scan (outside the part)."""
+    points = np.vstack([reference_points, scan_points])
+    rgb = np.empty((len(points), 3), np.uint8)
+    source = np.empty(len(points), np.uint8)
+    n_ref = len(reference_points)
+    rgb[:n_ref] = REFERENCE_RGB
+    source[:n_ref] = 0
+    rgb[n_ref:] = np.where(region[:, None], np.array(SCAN_RGB, np.uint8), np.array(OUTSIDE_RGB, np.uint8))
+    source[n_ref:] = np.where(region, 1, 2)
+    write_points_ply(path, points, rgb,
+                     "scan_eval overlay, metres, reference frame\n"
+                     f"orange (source 0) = reference '{reference_name}', {n_ref} samples\n"
+                     f"blue (source 1) = aligned scan over the part, grey (source 2) = scan elsewhere",
+                     extra=[("source", "u1", source)])
+    return n_ref
 
 
 def plot_histogram(path, signed_mm, metrics, title):

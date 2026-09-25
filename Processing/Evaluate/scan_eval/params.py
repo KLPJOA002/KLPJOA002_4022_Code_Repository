@@ -103,6 +103,12 @@ class EvalParams:
     label: str | None = None
     write_ply: bool = True
     write_plots: bool = True
+    # Also write overlay.ply: the reference and the aligned scan in one cloud,
+    # for checking the alignment (and the choice of reference) by eye.
+    write_overlay: bool = True
+    # Reference points drawn in that overlay. Enough to read the shape;
+    # raise it for a big part, lower it if your viewer struggles.
+    overlay_samples: int = 150000
 
     def to_dict(self):
         return asdict(self)
