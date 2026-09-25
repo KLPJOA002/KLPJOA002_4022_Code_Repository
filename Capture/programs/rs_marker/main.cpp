@@ -29,6 +29,9 @@ static void print_usage(const char* prog)
               << "  -n, --frames    Stop after N frames      (default: no frame limit)\n"
               << "  -test           RGB-only: stream with marker overlays, save annotated video\n"
               << "  -id             RGB-only: detect ALL 36h11 tags, log unique IDs seen\n"
+              << "  -nTags N        Expected tags in view; if fewer are found, rerun detection on\n"
+              << "                  an illumination-flattened image (default: 4, 0 = off)\n"
+              << "  -debugTags      Overlay rejected tag candidates (red) + counts on RGB window\n"
               << "  -h, --help      Show this message\n";
 }
 
@@ -170,9 +173,10 @@ static void print_stats(long long frames, double elapsed,
 
 // ── Detection result type ─────────────────────────────────────────────────────
 struct Detection {
-    int                      id;
+    int                      id;       // -1 when the square was found but bits didn't decode
     std::vector<cv::Point2f> corners;
     cv::Point2f              centre;
+    bool                     decoded;
 };
 
 // ── CSV logging ───────────────────────────────────────────────────────────────
@@ -189,7 +193,7 @@ static std::ofstream open_csv(const std::string& path)
 {
     std::ofstream f(path);
     f << "timestamp_ms,frame,marker_id,cx,cy,depth_m,"
-      << "c0x,c0y,c1x,c1y,c2x,c2y,c3x,c3y\n";
+      << "c0x,c0y,c1x,c1y,c2x,c2y,c3x,c3y,decoded\n";
     return f;
 }
 
@@ -241,8 +245,8 @@ static void log_detections(std::ofstream& f, long long frame, double timestamp_m
           << d.centre.x      << "," << d.centre.y << ","
           << depth_m         << ",";
         for (int i = 0; i < 4; ++i)
-            f << d.corners[i].x << "," << d.corners[i].y
-              << (i < 3 ? "," : "\n");
+            f << d.corners[i].x << "," << d.corners[i].y << ",";
+        f << (d.decoded ? 1 : 0) << "\n";
     }
     f.flush();
 }
@@ -252,6 +256,26 @@ static void log_detections(std::ofstream& f, long long frame, double timestamp_m
 // ═════════════════════════════════════════════════════════════════════════════
 
 static const std::vector<int> TARGET_IDS = {0, 1, 2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16, 93, 94, 95};
+
+// ── Undecoded-square filter (detect_all_markers) — tune these first ──────────
+// OpenCV's rejected list also holds sand texture, shells, burrows etc.; a
+// rejected square is only kept as an undecoded tag if it passes all of these.
+constexpr float  CAND_MAX_SIDE_RATIO   = 2.0f;   // longest/shortest side — rejects slivers
+constexpr float  CAND_MIN_SIDE_PX      = 15.0f;  // absolute side limits, used when no tag decoded
+constexpr float  CAND_MAX_SIDE_PX      = 400.0f;
+constexpr float  CAND_MEDIAN_SIDE_TOL  = 0.5f;   // else: +/- this fraction of median decoded side
+constexpr int    CAND_CELL_PX          = 8;      // warped cell size for the border contrast check
+constexpr double CAND_MIN_CONTRAST     = 8.0;    // white margin - black border (grey levels)
+constexpr double CAND_MAX_BORDER_RATIO = 0.75;   // black border must be < this * white margin
+constexpr int    CAND_MIN_SIDES_PASS   = 3;      // of 4 — one side may fail (shadow across it)
+constexpr int    CAND_MIN_DATA_CELLS   = 4;      // need >= this many white AND black data cells
+                                                 // (rejects solid dark blobs/shells; 0 = off)
+constexpr float  CAND_DEDUP_FRAC       = 0.5f;   // duplicate if centres closer than this * side
+
+// ── Second pass on an illumination-flattened image (when < expected tags) ────
+constexpr double FLATTEN_SIGMA_PX      = 30.0;   // background blur: >> tag cell size, < shadow scale
+constexpr bool   FLATTEN_USE_CLAHE     = false;  // true: CLAHE instead of divide-by-blur
+constexpr double FLATTEN_CLAHE_CLIP    = 2.0;
 
 // Returns detections for TARGET_IDS only, ignoring any other tags in frame.
 static std::vector<Detection> detect_markers(const cv::Mat& gray)
@@ -284,15 +308,138 @@ static std::vector<Detection> detect_markers(const cv::Mat& gray)
         for (const auto& pt : all_corners[i]) centre += pt;
         centre *= 0.25f;
 
-        results.push_back({all_ids[i], all_corners[i], centre});
+        results.push_back({all_ids[i], all_corners[i], centre, true});
     }
     return results;
 }
 
+// Centre = intersection of the quad's diagonals (perspective-correct, unlike the
+// corner average). Falls back to the corner average if the diagonals are near-parallel.
+static cv::Point2f quad_centre(const std::vector<cv::Point2f>& c)
+{
+    const cv::Point2f d1 = c[2] - c[0], d2 = c[3] - c[1];
+    const float cross = d1.x * d2.y - d1.y * d2.x;
+    if (std::fabs(cross) > 1e-2f * std::sqrt(d1.dot(d1) * d2.dot(d2))) {
+        const cv::Point2f r = c[1] - c[0];
+        return c[0] + ((r.x * d2.y - r.y * d2.x) / cross) * d1;
+    }
+    return (c[0] + c[1] + c[2] + c[3]) * 0.25f;
+}
+
+static float mean_side(const std::vector<cv::Point2f>& c)
+{
+    float sum = 0.0f;
+    for (int i = 0; i < 4; ++i) sum += (float)cv::norm(c[(i + 1) % 4] - c[i]);
+    return sum * 0.25f;
+}
+
+// Index of a result whose centre lies within CAND_DEDUP_FRAC * side of `centre`, else -1.
+static int find_duplicate(const std::vector<Detection>& results, cv::Point2f centre, float side)
+{
+    for (size_t i = 0; i < results.size(); ++i)
+        if (cv::norm(results[i].centre - centre) < CAND_DEDUP_FRAC * side) return (int)i;
+    return -1;
+}
+
+// Warps the quad into a 10x10-cell image with the quad on cells 1..9. 36h11 layout is
+// white margin (cell 0) | black border (1) | 6 data (2-7) | black border (8) | white margin (9).
+// Border: per side, compares the margin band with the border band (central half of the
+// cell thickness, corner cells skipped); needs CAND_MIN_SIDES_PASS of 4 sides to pass.
+// Data: a real tag has both white and black data cells; a solid dark blob does not.
+static bool border_contrast_ok(const cv::Mat& gray, const std::vector<cv::Point2f>& quad)
+{
+    const int   C  = CAND_CELL_PX;
+    const float lo = 1.0f * C, hi = 9.0f * C;
+    const std::vector<cv::Point2f> dst = {{lo, lo}, {hi, lo}, {hi, hi}, {lo, hi}};
+    cv::Mat warped;
+    cv::warpPerspective(gray, warped, cv::getPerspectiveTransform(quad, dst),
+                        cv::Size(10 * C, 10 * C), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+
+    auto band_mean = [&](bool horizontal, int cell) {
+        const cv::Rect r = horizontal ? cv::Rect(2 * C, cell * C + C / 4, 6 * C, C / 2)
+                                      : cv::Rect(cell * C + C / 4, 2 * C, C / 2, 6 * C);
+        return cv::mean(warped(r))[0];
+    };
+
+    // {horizontal, margin cell, border cell} for top, bottom, left, right
+    const int sides[4][3] = {{1, 0, 1}, {1, 9, 8}, {0, 0, 1}, {0, 9, 8}};
+    int    passed = 0;
+    double outside_sum = 0.0, border_sum = 0.0;
+    for (const auto& s : sides) {
+        const double outside = band_mean(s[0], s[1]);
+        const double border  = band_mean(s[0], s[2]);
+        outside_sum += outside;
+        border_sum  += border;
+        if (outside - border > CAND_MIN_CONTRAST && border < CAND_MAX_BORDER_RATIO * outside)
+            ++passed;
+    }
+    if (passed < CAND_MIN_SIDES_PASS) return false;
+
+    // Data cells 2..7, central half of each, classified against the margin/border midpoint
+    const double mid = 0.125 * (outside_sum + border_sum);
+    int n_white = 0, n_black = 0;
+    for (int r = 2; r < 8; ++r)
+        for (int c = 2; c < 8; ++c) {
+            const double v = cv::mean(warped(cv::Rect(c * C + C / 4, r * C + C / 4, C / 2, C / 2)))[0];
+            (v > mid ? n_white : n_black)++;
+        }
+    return n_white >= CAND_MIN_DATA_CELLS && n_black >= CAND_MIN_DATA_CELLS;
+}
+
+// Shape + size + border-contrast filter for a rejected candidate.
+static bool candidate_ok(const cv::Mat& gray, const std::vector<cv::Point2f>& quad,
+                         float min_side, float max_side)
+{
+    if (!cv::isContourConvex(quad)) return false;
+
+    float shortest = (float)cv::norm(quad[1] - quad[0]), longest = shortest;
+    for (int i = 1; i < 4; ++i) {
+        const float s = (float)cv::norm(quad[(i + 1) % 4] - quad[i]);
+        shortest = std::min(shortest, s);
+        longest  = std::max(longest,  s);
+    }
+    if (longest > CAND_MAX_SIDE_RATIO * shortest)      return false;
+    if (shortest < min_side || longest > max_side)     return false;
+    return border_contrast_ok(gray, quad);
+}
+
+// Evens out sun/shadow: gray / heavy blur of itself, scaled to 128. The blur runs at
+// quarter resolution (then upsampled) since a sigma-30 kernel at full res is slow.
+static cv::Mat flatten_illumination(const cv::Mat& gray)
+{
+    cv::Mat out;
+    if (FLATTEN_USE_CLAHE) {
+        static cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(FLATTEN_CLAHE_CLIP, cv::Size(8, 8));
+        clahe->apply(gray, out);
+        return out;
+    }
+    cv::Mat f, small, bg;
+    gray.convertTo(f, CV_32F);
+    cv::resize(f, small, cv::Size(), 0.25, 0.25, cv::INTER_AREA);
+    cv::GaussianBlur(small, small, cv::Size(0, 0), FLATTEN_SIGMA_PX * 0.25);
+    cv::resize(small, bg, f.size(), 0, 0, cv::INTER_LINEAR);
+    cv::divide(f, bg + 1.0, f, 128.0);   // +1 avoids divide-by-zero on black pixels
+    f.convertTo(out, CV_8U);
+    return out;
+}
+
 // Draws detections onto frame and logs new IDs to stdout.
+// Decoded tags: green with ID. Undecoded squares (id -1): orange.
 static void draw_detections(cv::Mat& frame, const std::vector<Detection>& detections)
 {
     for (const auto& d : detections) {
+        if (!d.decoded) {
+            const cv::Scalar orange(0, 165, 255);
+            std::vector<cv::Point> pts(d.corners.begin(), d.corners.end());
+            cv::polylines(frame, pts, true, orange, 2);
+            cv::circle(frame, d.centre, 4, orange, -1);
+            cv::putText(frame,
+                        "? (" + std::to_string(int(d.centre.x))
+                        + "," + std::to_string(int(d.centre.y)) + ")",
+                        d.centre + cv::Point2f(8, -8),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.5, orange, 1);
+            continue;
+        }
         std::vector<std::vector<cv::Point2f>> c = {d.corners};
         std::vector<int>                      id = {d.id};
         cv::aruco::drawDetectedMarkers(frame, c, id);
@@ -306,36 +453,109 @@ static void draw_detections(cv::Mat& frame, const std::vector<Detection>& detect
     }
 }
 
-// Detects every 36h11 tag visible — no ID filter. Used by -id mode.
-static std::vector<Detection> detect_all_markers(const cv::Mat& gray)
+// Detects every 36h11 tag visible — no ID filter. Used by -id and normal mode.
+// Also keeps squares whose bits failed to decode (sun/shadow) as id -1, decoded = false,
+// if they pass candidate_ok(). If fewer than expected_tags are found (0 = never), reruns
+// on an illumination-flattened image and merges. Rejected candidates that fail the
+// filter are appended to *filtered_out when given (debug overlay).
+static std::vector<Detection> detect_all_markers(const cv::Mat& gray, int expected_tags = 0,
+                                                 std::vector<std::vector<cv::Point2f>>* filtered_out = nullptr)
 {
-    //static auto dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
-    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::makePtr<cv::aruco::Dictionary>(cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11));
-    static cv::aruco::DetectorParameters params = []() {
+    static const cv::aruco::ArucoDetector detector = []() {
         cv::aruco::DetectorParameters p;
 
-        p.adaptiveThreshWinSizeMin = 3; //change parameters of the aruco decector for better sunlight conditions
-        p.adaptiveThreshWinSizeMax = 53;
-        p.adaptiveThreshWinSizeStep = 4;
+        // Adaptive threshold windows 5,13,...,45: small ones keep small/far tags,
+        // large ones bridge strong sun/shadow gradients across a tag.
+        p.adaptiveThreshWinSizeMin  = 5;
+        p.adaptiveThreshWinSizeMax  = 45;
+        p.adaptiveThreshWinSizeStep = 8;
+        p.adaptiveThreshConstant    = 5;     // lower offset keeps washed-out (grey) black borders
+        p.polygonalApproxAccuracyRate = 0.05; // looser polygon fit for blurred / slightly bent edges
+        p.perspectiveRemovePixelPerCell         = 8;   // more samples per bit when decoding
+        p.perspectiveRemoveIgnoredMarginPerCell = 0.3; // sample cell centres only, ignore edge bleed
+        p.minOtsuStdDev = 3.0;               // still try Otsu on low-contrast tags
+        p.maxErroneousBitsInBorderRate = 0.5; // tolerate border bits flipped by a shadow edge
+        p.errorCorrectionRate = 1.0;          // use the full 36h11 error-correction capacity
+        p.cornerRefinementMethod = cv::aruco::CORNER_REFINE_SUBPIX; // sub-pixel corners → steadier centres
+        // Default 0.125 groups the white-margin outline with the black-border square
+        // (1 cell apart) and only one reaches `rejected` — usually the margin, which
+        // the border check then fails. Keep them separate so the true border is tested.
+        p.minMarkerDistanceRate = 0.02;
 
-        p.adaptiveThreshConstant = 7;
-
-        return p;
+        return cv::aruco::ArucoDetector(
+            cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11), p);
     }();
 
-
-    std::vector<int>                      all_ids;
-    std::vector<std::vector<cv::Point2f>> all_corners;
-    cv::aruco::detectMarkers(gray, dictionary, all_corners, all_ids, cv::makePtr<cv::aruco::DetectorParameters>(params));
-
     std::vector<Detection> results;
-    for (size_t i = 0; i < all_ids.size(); ++i) {
-        cv::Point2f centre(0, 0);
-        for (const auto& pt : all_corners[i]) centre += pt;
-        centre *= 0.25f;
-        results.push_back({all_ids[i], all_corners[i], centre});
-    }
+    std::vector<float>     decoded_sides;
+
+    auto run_pass = [&](const cv::Mat& img) {
+        std::vector<int>                      ids;
+        std::vector<std::vector<cv::Point2f>> corners, rejected;
+        detector.detectMarkers(img, corners, ids, rejected);
+
+        for (size_t i = 0; i < ids.size(); ++i) {
+            const float side = mean_side(corners[i]);
+            const Detection d{ids[i], corners[i], quad_centre(corners[i]), true};
+            const int dup = find_duplicate(results, d.centre, side);
+            if (dup < 0)                   results.push_back(d);
+            else if (!results[dup].decoded) results[dup] = d;  // now decodes: upgrade it
+            else                           continue;
+            decoded_sides.push_back(side);
+        }
+
+        // Side limits: absolute, or +/- CAND_MEDIAN_SIDE_TOL of the median decoded side
+        float min_side = CAND_MIN_SIDE_PX, max_side = CAND_MAX_SIDE_PX;
+        if (!decoded_sides.empty()) {
+            std::vector<float> s = decoded_sides;
+            std::nth_element(s.begin(), s.begin() + s.size() / 2, s.end());
+            const float median = s[s.size() / 2];
+            min_side = (1.0f - CAND_MEDIAN_SIDE_TOL) * median;
+            max_side = (1.0f + CAND_MEDIAN_SIDE_TOL) * median;
+        }
+
+        for (const auto& q : rejected) {
+            if (q.size() != 4) { if (filtered_out) filtered_out->push_back(q); continue; }
+            const cv::Point2f centre = quad_centre(q);
+            if (find_duplicate(results, centre, mean_side(q)) >= 0) continue;
+            if (!candidate_ok(img, q, min_side, max_side)) {
+                if (filtered_out) filtered_out->push_back(q);
+                continue;
+            }
+            results.push_back({-1, q, centre, false});
+        }
+    };
+
+    run_pass(gray);
+    if (expected_tags > 0 && (int)results.size() < expected_tags)
+        run_pass(flatten_illumination(gray));
+
     return results;
+}
+
+// Debug overlay: rejected candidates that failed the filter — thin red, centre dot.
+static void draw_rejected(cv::Mat& frame, const std::vector<std::vector<cv::Point2f>>& quads)
+{
+    const cv::Scalar red(0, 0, 255);
+    for (const auto& q : quads) {
+        std::vector<cv::Point> pts(q.begin(), q.end());
+        cv::polylines(frame, pts, true, red, 1);
+        if (q.size() == 4) cv::circle(frame, quad_centre(q), 2, red, -1);
+    }
+}
+
+// Debug overlay: per-frame counts of decoded / undecoded / filtered-out.
+static void draw_detection_counts(cv::Mat& frame, const std::vector<Detection>& detections,
+                                  size_t n_filtered)
+{
+    size_t n_decoded = 0;
+    for (const auto& d : detections) n_decoded += d.decoded;
+    cv::putText(frame,
+                "decoded " + std::to_string(n_decoded)
+                + "  undecoded " + std::to_string(detections.size() - n_decoded)
+                + "  filtered " + std::to_string(n_filtered),
+                cv::Point(10, frame.rows - 12),
+                cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(255, 255, 255), 2);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -395,6 +615,8 @@ int main(int argc, char* argv[])
     long long   frame_limit   = 0;   // 0 = no limit
     bool        test_mode     = false;
     bool        id_mode       = false;
+    int         expected_tags = 4;       // -nTags: triggers the flattened second pass
+    bool        debug_tags    = false;   // -debugTags: draw filtered-out candidates
 
     std::unique_ptr<mountSerial> serial;
     char read_buf[30];
@@ -425,6 +647,10 @@ int main(int argc, char* argv[])
             id_mode = true;
         else if (arg == "-noTilt" || arg == "--noTilt")
             Enable_Tilt = false;
+        else if ((arg == "-nTags" || arg == "--nTags") && i + 1 < argc)
+            expected_tags = std::stoi(argv[++i]);
+        else if (arg == "-debugTags" || arg == "--debugTags")
+            debug_tags = true;
         else if (arg == "-h" || arg == "--help") { print_usage(argv[0]); return 0; }
         else { std::cerr << "Unknown argument: " << arg << "\n"; print_usage(argv[0]); return 1; }
     }
@@ -624,16 +850,22 @@ int main(int argc, char* argv[])
                 // cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
                 // clahe->apply(gray,gray);
 
-                auto detections = detect_all_markers(gray); //detect apriltags
+                std::vector<std::vector<cv::Point2f>> filtered_out;
+                auto detections = detect_all_markers(gray, expected_tags,
+                                                     debug_tags ? &filtered_out : nullptr); //detect apriltags
 
                 for (const auto& d : detections) { //lis detection on console
-                    if (seen_ids.insert(d.id).second) {
+                    if (d.decoded && seen_ids.insert(d.id).second) {
                         std::cout << "[NEW] ID: " << d.id
                                 << "  (total unique: " << seen_ids.size() << ")\n"
                                 << std::flush;
                     }
                 }
 
+                if (debug_tags) {
+                    draw_rejected(color_bgr, filtered_out);
+                    draw_detection_counts(color_bgr, detections, filtered_out.size());
+                }
                 draw_detections(color_bgr, detections); //draw each detection on colour frame
 
                 // Overlay unique-ID list in top-left corner
@@ -705,7 +937,13 @@ int main(int argc, char* argv[])
                 //cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(2.0, cv::Size(8,8));
                 //clahe->apply(gray,gray); //Applied CLAHE after gray conversion to reduce dynamic range of image 
 
-                auto detections = detect_all_markers(gray); //detect tags and draw on colour frame
+                std::vector<std::vector<cv::Point2f>> filtered_out;
+                auto detections = detect_all_markers(gray, expected_tags,
+                                                     debug_tags ? &filtered_out : nullptr); //detect tags and draw on colour frame
+                if (debug_tags) {
+                    draw_rejected(color_bgr, filtered_out);
+                    draw_detection_counts(color_bgr, detections, filtered_out.size());
+                }
                 draw_detections(color_bgr, detections);
                 draw_detections(gray,detections);
 
