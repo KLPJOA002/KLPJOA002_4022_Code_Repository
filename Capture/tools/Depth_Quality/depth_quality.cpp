@@ -16,6 +16,12 @@
 //       -lrealsense2 $(pkg-config --cflags --libs opencv4)   (one line)
 //
 // Keys (in any image window): q/Esc end trial, r re-select ROI, s save PNG snapshot
+//
+// Reprocessing: --reprocess PATH replays .db3 recordings made by this tool (a run
+// folder, a trial folder, a single file, or any folder above them). Each trial's
+// settings are read back from its trial_info.txt; flags given on the command line
+// override them. Results go to a new <dir>/<timestamp>_reprocess/ folder that mirrors
+// the original run/trial layout (metrics CSV, trial_info.txt, summary.csv; no bag).
 
 #include <librealsense2/rs.hpp>
 #include <librealsense2/rsutil.h>
@@ -38,6 +44,8 @@
 #include <cctype>
 #include <limits>
 #include <thread>
+#include <filesystem>
+#include <set>
 #include <sys/stat.h>
 
 static std::atomic<bool> g_running{true};
@@ -89,6 +97,12 @@ struct Options {
     double      patch_smooth  = 0.3;     // EMA weight of the newest plane estimate
     int         patch_hyst_px = 3;       // ignore ROI moves smaller than this, in px
     int         patch_min_px  = 8;       // never let the ROI shrink below this
+    // Reprocessing of recorded trials
+    std::vector<std::string> reprocess;  // recordings / folders to replay (empty = live camera)
+    bool        show       = false;      // show the image windows while reprocessing
+    bool        flip_pitch = false;      // negate each trial's recorded pitch
+    bool        flip_roll  = false;      // negate each trial's recorded roll
+    bool        all_frames = false;      // analyse every recorded frame, not just the original ones
 
     TrialSetup  setup;
 };
@@ -136,6 +150,21 @@ static void print_usage(const char* prog)
     "      -noIMU             Do not stream the accelerometer\n"
     "      --print-every N    Console line every N frames (default 1)\n"
     "      --err-range MM     +/- range of the error-map colours (default 10)\n"
+    "\nReprocessing recorded trials (no camera needed):\n"
+    "      --reprocess PATH   Replay the .db3 recordings under PATH (run folder, trial\n"
+    "                         folder, single file or any parent folder; repeatable).\n"
+    "                         Each trial reuses the settings in its trial_info.txt;\n"
+    "                         any flag above that is also given here overrides them\n"
+    "                         for every trial (so -p sets one pitch for all trials).\n"
+    "                         -D, -n, -d still apply. Capture-only flags (--res, --fps,\n"
+    "                         --preset, --emitter, --laser-power, --exposure, ...) do not.\n"
+    "                         Output: <dir>/<timestamp>_reprocess/<run>/<trial>/\n"
+    "      --flip-pitch       Negate each trial's recorded pitch\n"
+    "      --flip-roll        Negate each trial's recorded roll\n"
+    "      --show             Show the image windows while reprocessing (default off)\n"
+    "      --all-frames       Analyse every frame in the recording. Default: only the\n"
+    "                         frames the original run analysed (matched by device\n"
+    "                         timestamp from its metrics CSV), so results compare 1:1\n"
     "  -h, --help\n"
     "\nKeys: q/Esc end trial, r re-select ROI, s save PNG snapshot\n";
 }
@@ -247,6 +276,18 @@ static PipelineCtx start_pipeline_retry(const std::string& record_file, const Op
         }
     }
     throw std::runtime_error("Failed to start RealSense pipeline after retries");
+}
+
+// Replays a recording made by this tool. Playback is not real-time, so every
+// recorded frame is handed over however slowly it is processed.
+static PipelineCtx start_playback(const std::string& file)
+{
+    PipelineCtx ctx;
+    rs2::config cfg;
+    cfg.enable_device_from_file(file, /*repeat_playback=*/false);
+    ctx.profile = ctx.pipe.start(cfg);
+    ctx.profile.get_device().as<rs2::playback>().set_real_time(false);
+    return ctx;
 }
 
 // Stereo baseline in mm (needed for the sub-pixel RMS metric).
@@ -930,108 +971,339 @@ static bool prompt_next_trial(Options& o)
     return true;
 }
 
+// ── Command line ──────────────────────────────────────────────────────────────
+// Applies argv on top of whatever `o` already holds, so reprocessing can call it
+// again after loading a trial's recorded settings. Returns false for --help;
+// throws on bad input.
+static bool parse_args(int argc, char* argv[], Options& o)
+{
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        auto next = [&]() -> std::string {
+            if (i + 1 >= argc) throw std::runtime_error("missing value for " + arg);
+            return argv[++i];
+        };
+        if      (arg == "-H" || arg == "--height")    { o.setup.height_mm = std::stod(next()); o.setup.axis_mm = 0; }
+        else if (arg == "-Z" || arg == "--axis-dist") { o.setup.axis_mm = std::stod(next()); o.setup.height_mm = 0; }
+        else if (arg == "-p" || arg == "--pitch")     o.setup.pitch_deg = std::stod(next());
+        else if (arg == "-R" || arg == "--roll")      o.setup.roll_deg  = std::stod(next());
+        else if (arg == "--gt-offset")                o.gt_offset_mm    = std::stod(next());
+        else if (arg == "-L" || arg == "--label")     o.setup.label     = next();
+        else if (arg == "--lux")                      o.setup.lux       = std::stod(next());
+        else if (arg == "-r" || arg == "--roi") {
+            if (!parse_roi(next(), o.roi)) throw std::runtime_error("bad --roi, expected X,Y,W,H");
+            o.roi_given = true;
+        }
+        else if (arg == "--roi-pct")                  { o.roi_pct = std::stod(next()); o.roi_given = false; }
+        else if (arg == "--select-roi")               o.select_roi = true;
+        else if (arg == "--patch-size")               o.patch_size = std::max(0.0, std::stod(next()));
+        else if (arg == "--patch-outer")              o.patch_outer = true;
+        else if (arg == "--patch-smooth")             o.patch_smooth = std::clamp(std::stod(next()), 0.01, 1.0);
+        else if (arg == "--patch-hyst")               o.patch_hyst_px = std::max(0, std::stoi(next()));
+        else if (arg == "-D" || arg == "--dir")       o.output_dir = next();
+        else if (arg == "-d" || arg == "--duration")  o.duration_sec = std::stoi(next());
+        else if (arg == "-n" || arg == "--frames")    o.frame_limit  = std::stoll(next());
+        else if (arg == "--res") {
+            if (std::sscanf(next().c_str(), "%dx%d", &o.width, &o.height) != 2)
+                throw std::runtime_error("bad --res, expected WxH");
+        }
+        else if (arg == "--fps")                      o.fps = std::stoi(next());
+        else if (arg == "--preset") {
+            o.preset = next();
+            if (preset_value(o.preset) < 0) throw std::runtime_error("unknown preset " + o.preset);
+        }
+        else if (arg == "--emitter")                  o.emitter = (next() == "on") ? 1 : 0;
+        else if (arg == "--laser-power")              o.laser_power = std::stof(next());
+        else if (arg == "--exposure")                 o.exposure_us = std::stof(next());
+        else if (arg == "--filters")                  o.use_filters = true;
+        else if (arg == "--min-dist")                 o.min_dist = std::stof(next());
+        else if (arg == "--max-dist")                 o.max_dist = std::stof(next());
+        else if (arg == "--ext")                      o.bag_ext = next();
+        else if (arg == "-noRecord" || arg == "--noRecord") o.record = false;
+        else if (arg == "-noColor"  || arg == "--noColor")  o.use_color = false;
+        else if (arg == "-noIMU"    || arg == "--noIMU")    o.use_imu = false;
+        else if (arg == "--print-every")              o.print_every = std::max(1, std::stoi(next()));
+        else if (arg == "--err-range")                o.err_range_mm = std::max(0.1, std::stod(next()));
+        else if (arg == "--reprocess")                o.reprocess.push_back(next());
+        else if (arg == "--show")                     o.show = true;
+        else if (arg == "--flip-pitch")               o.flip_pitch = true;
+        else if (arg == "--flip-roll")                o.flip_roll = true;
+        else if (arg == "--all-frames")               o.all_frames = true;
+        else if (arg == "-h" || arg == "--help")      { print_usage(argv[0]); return false; }
+        else throw std::runtime_error("unknown argument " + arg);
+    }
+    return true;
+}
+
+// ── Reprocessing ──────────────────────────────────────────────────────────────
+namespace fs = std::filesystem;
+
+// One recorded trial to replay, with its settings fully resolved.
+struct TrialJob {
+    std::string bag;                // source recording
+    std::string info_file;          // its trial_info.txt ("" if there was none)
+    std::string run_ts;             // original run folder name, reused in the trial name
+    std::string out_run_dir;        // mirrored run folder under the reprocess root
+    int         index       = 0;
+    double      baseline_mm = 0.0;  // from trial_info, in case the recording lacks it
+    double      orig_pitch  = NaN, orig_roll = NaN;
+    std::string orig_csv;           // original metrics CSV, if any
+    std::set<long long> frame_keys; // frames it analysed (ts_key); empty = use every frame
+    Options     o;
+};
+
+// Device timestamps as integer microseconds, so frames can be matched against the
+// 3-decimal millisecond values in a metrics CSV.
+static long long ts_key(double ms) { return std::llround(ms * 1000.0); }
+
+// Collects the device_ts_ms column of a metrics CSV written by this tool.
+static std::set<long long> load_frame_keys(const std::string& csv_path)
+{
+    std::set<long long> keys;
+    std::ifstream f(csv_path);
+    std::string line, cell;
+    if (!std::getline(f, line)) return keys;
+    int col = -1, i = 0;
+    for (std::istringstream h(line); std::getline(h, cell, ','); ++i)
+        if (cell == "device_ts_ms") col = i;
+    if (col < 0) return keys;
+    while (std::getline(f, line)) {
+        std::istringstream r(line);
+        for (i = 0; std::getline(r, cell, ','); ++i)
+            if (i == col) {
+                try { keys.insert(ts_key(std::stod(cell))); } catch (...) {}
+                break;
+            }
+    }
+    return keys;
+}
+
+// Reads back the "key: value" header of a trial_info.txt written by this tool (it
+// stops at the blank line in front of the summary block).
+static bool load_trial_info(const std::string& path, Options& o, int& index, double& baseline_mm)
+{
+    std::ifstream f(path);
+    if (!f) return false;
+    bool have_roi_start = false;
+    std::string line;
+    while (std::getline(f, line) && !line.empty()) {
+        const auto c = line.find(':');
+        if (c == std::string::npos) continue;
+        const std::string k = line.substr(0, c);
+        std::string v = line.substr(c + 1);
+        v.erase(0, std::min(v.size(), v.find_first_not_of(' ')));
+        try {
+            if      (k == "trial")           index = std::stoi(v);
+            else if (k == "label")           o.setup.label     = v;
+            else if (k == "height_mm")       o.setup.height_mm = std::stod(v);
+            else if (k == "axis_dist_mm")    o.setup.axis_mm   = std::stod(v);
+            else if (k == "pitch_deg")       o.setup.pitch_deg = std::stod(v);
+            else if (k == "roll_deg")        o.setup.roll_deg  = std::stod(v);
+            else if (k == "lux")             o.setup.lux       = std::stod(v);
+            else if (k == "gt_offset_mm")    o.gt_offset_mm    = std::stod(v);
+            else if (k == "resolution")      std::sscanf(v.c_str(), "%dx%d@%d", &o.width, &o.height, &o.fps);
+            else if (k == "baseline_mm")     baseline_mm       = std::stod(v);
+            else if (k == "preset")          o.preset          = v;
+            else if (k == "filters")         o.use_filters     = std::stoi(v) != 0;
+            else if (k == "min_dist_m")      o.min_dist        = std::stof(v);
+            else if (k == "max_dist_m")      o.max_dist        = std::stof(v);
+            else if (k == "emitter_set")     o.emitter         = std::stoi(v);
+            else if (k == "laser_power_set") o.laser_power     = std::stof(v);
+            else if (k == "exposure_set_us") o.exposure_us     = std::stof(v);
+            else if (k == "roi_pct")         o.roi_pct         = std::stod(v);
+            // roi_start (newer files) is the ROI the trial started from; plain roi is
+            // the last frame's, which only differs when the patch ROI was tracking.
+            else if (k == "roi_start")       { if (parse_roi(v, o.roi)) { o.roi_given = true; have_roi_start = true; } }
+            else if (k == "roi")             { if (!have_roi_start && parse_roi(v, o.roi)) o.roi_given = true; }
+            else if (k == "patch_size_mm")   o.patch_size      = std::stod(v);
+            else if (k == "patch_roi_mode")  o.patch_outer     = v.rfind("outer", 0) == 0;
+            else if (k == "patch_smooth")    o.patch_smooth    = std::stod(v);
+            else if (k == "patch_hyst_px")   o.patch_hyst_px   = std::stoi(v);
+        } catch (...) {
+            std::cerr << "  " << path << ": bad value for '" << k << "': " << v << "\n";
+        }
+    }
+    return true;
+}
+
+static bool is_recording(const fs::path& p)
+{
+    const std::string e = p.extension().string();
+    return e == ".db3" || e == ".bag";
+}
+
+static std::vector<std::string> find_recordings(const std::vector<std::string>& inputs)
+{
+    std::set<std::string> found;                  // sorted and de-duplicated
+    for (const auto& in : inputs) {
+        std::error_code ec;
+        if (fs::is_regular_file(in, ec) && is_recording(in)) {
+            found.insert(fs::canonical(in).string());
+        } else if (fs::is_directory(in, ec)) {
+            for (const auto& e : fs::recursive_directory_iterator(in, ec))
+                if (e.is_regular_file() && is_recording(e.path()))
+                    found.insert(fs::canonical(e.path()).string());
+        } else {
+            std::cerr << "--reprocess: no recording or folder at " << in << "\n";
+        }
+    }
+    return {found.begin(), found.end()};
+}
+
+// Settings precedence per trial: built-in defaults < trial_info.txt < command line.
+static std::vector<TrialJob> build_jobs(int argc, char* argv[], const Options& cli,
+                                        const std::string& out_root)
+{
+    std::vector<TrialJob> jobs;
+    for (const auto& bag : find_recordings(cli.reprocess)) {
+        const fs::path trial_dir = fs::path(bag).parent_path();
+        TrialJob j;
+        j.bag       = bag;
+        j.run_ts    = trial_dir.parent_path().filename().string();
+        j.index     = int(jobs.size());
+        j.info_file = (trial_dir / "trial_info.txt").string();
+        if (!load_trial_info(j.info_file, j.o, j.index, j.baseline_mm)) {
+            std::cerr << "No trial_info.txt next to " << bag << " -- using command-line values only.\n";
+            j.info_file.clear();
+        }
+        j.orig_pitch = j.o.setup.pitch_deg;
+        j.orig_roll  = j.o.setup.roll_deg;
+        parse_args(argc, argv, j.o);
+        if (j.o.flip_pitch) j.o.setup.pitch_deg = 0.0 - j.o.setup.pitch_deg;   // 0 - x: no "-0"
+        if (j.o.flip_roll)  j.o.setup.roll_deg  = 0.0 - j.o.setup.roll_deg;
+        std::error_code ec;
+        for (const auto& e : fs::directory_iterator(trial_dir, ec)) {
+            const std::string fn = e.path().filename().string();
+            if (fn.size() > 12 && fn.compare(fn.size() - 12, 12, "_metrics.csv") == 0) {
+                j.orig_csv = e.path().string();
+                break;
+            }
+        }
+        if (!j.o.all_frames && !j.orig_csv.empty()) j.frame_keys = load_frame_keys(j.orig_csv);
+        j.o.record      = false;
+        j.out_run_dir   = out_root + "/" + j.run_ts;
+        jobs.push_back(std::move(j));
+    }
+    return jobs;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 int main(int argc, char* argv[])
 {
-    Options o;
-
+    Options cli;
     try {
-        for (int i = 1; i < argc; ++i) {
-            std::string arg = argv[i];
-            auto next = [&]() -> std::string {
-                if (i + 1 >= argc) throw std::runtime_error("missing value for " + arg);
-                return argv[++i];
-            };
-            if      (arg == "-H" || arg == "--height")    { o.setup.height_mm = std::stod(next()); o.setup.axis_mm = 0; }
-            else if (arg == "-Z" || arg == "--axis-dist") { o.setup.axis_mm = std::stod(next()); o.setup.height_mm = 0; }
-            else if (arg == "-p" || arg == "--pitch")     o.setup.pitch_deg = std::stod(next());
-            else if (arg == "-R" || arg == "--roll")      o.setup.roll_deg  = std::stod(next());
-            else if (arg == "--gt-offset")                o.gt_offset_mm    = std::stod(next());
-            else if (arg == "-L" || arg == "--label")     o.setup.label     = next();
-            else if (arg == "--lux")                      o.setup.lux       = std::stod(next());
-            else if (arg == "-r" || arg == "--roi") {
-                if (!parse_roi(next(), o.roi)) throw std::runtime_error("bad --roi, expected X,Y,W,H");
-                o.roi_given = true;
-            }
-            else if (arg == "--roi-pct")                  o.roi_pct = std::stod(next());
-            else if (arg == "--select-roi")               o.select_roi = true;
-            else if (arg == "--patch-size")               o.patch_size = std::max(0.0, std::stod(next()));
-            else if (arg == "--patch-outer")              o.patch_outer = true;
-            else if (arg == "--patch-smooth")             o.patch_smooth = std::clamp(std::stod(next()), 0.01, 1.0);
-            else if (arg == "--patch-hyst")               o.patch_hyst_px = std::max(0, std::stoi(next()));
-            else if (arg == "-D" || arg == "--dir")       o.output_dir = next();
-            else if (arg == "-d" || arg == "--duration")  o.duration_sec = std::stoi(next());
-            else if (arg == "-n" || arg == "--frames")    o.frame_limit  = std::stoll(next());
-            else if (arg == "--res") {
-                if (std::sscanf(next().c_str(), "%dx%d", &o.width, &o.height) != 2)
-                    throw std::runtime_error("bad --res, expected WxH");
-            }
-            else if (arg == "--fps")                      o.fps = std::stoi(next());
-            else if (arg == "--preset") {
-                o.preset = next();
-                if (preset_value(o.preset) < 0) throw std::runtime_error("unknown preset " + o.preset);
-            }
-            else if (arg == "--emitter")                  o.emitter = (next() == "on") ? 1 : 0;
-            else if (arg == "--laser-power")              o.laser_power = std::stof(next());
-            else if (arg == "--exposure")                 o.exposure_us = std::stof(next());
-            else if (arg == "--filters")                  o.use_filters = true;
-            else if (arg == "--min-dist")                 o.min_dist = std::stof(next());
-            else if (arg == "--max-dist")                 o.max_dist = std::stof(next());
-            else if (arg == "--ext")                      o.bag_ext = next();
-            else if (arg == "-noRecord" || arg == "--noRecord") o.record = false;
-            else if (arg == "-noColor"  || arg == "--noColor")  o.use_color = false;
-            else if (arg == "-noIMU"    || arg == "--noIMU")    o.use_imu = false;
-            else if (arg == "--print-every")              o.print_every = std::max(1, std::stoi(next()));
-            else if (arg == "--err-range")                o.err_range_mm = std::max(0.1, std::stod(next()));
-            else if (arg == "-h" || arg == "--help")      { print_usage(argv[0]); return 0; }
-            else throw std::runtime_error("unknown argument " + arg);
-        }
+        if (!parse_args(argc, argv, cli)) return 0;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << "\n";
         print_usage(argv[0]);
         return 1;
     }
 
-    if (std::fabs(o.setup.pitch_deg) > 80 || std::fabs(o.setup.roll_deg) > 80) {
+    if (std::fabs(cli.setup.pitch_deg) > 80 || std::fabs(cli.setup.roll_deg) > 80) {
         std::cerr << "Error: |pitch| and |roll| must be below 80 degrees.\n"; return 1;
+    }
+
+    const bool reprocess = !cli.reprocess.empty();
+    const bool show      = !reprocess || cli.show;
+    if (reprocess && cli.select_roi && !show) {
+        std::cerr << "Error: --select-roi needs --show when reprocessing.\n"; return 1;
+    }
+    if (reprocess && find_recordings(cli.reprocess).empty()) {
+        std::cerr << "Error: no .db3/.bag recordings found to reprocess.\n"; return 1;
     }
 
     std::signal(SIGINT,  signal_handler);
     std::signal(SIGTERM, signal_handler);
 
     const std::string run_ts       = timestamp_str();
-    const std::string session_root = make_session_dir(o.output_dir, run_ts);
-    const std::string summary_file = session_root + "/summary.csv";
+    const std::string session_root = make_session_dir(cli.output_dir, reprocess ? run_ts + "_reprocess" : run_ts);
     std::cout << "Run folder: " << session_root << "\n";
+
+    std::vector<TrialJob> jobs;
+    if (reprocess) {
+        jobs = build_jobs(argc, argv, cli, session_root);
+        std::ofstream f(session_root + "/reprocess_info.txt");
+        f << "command:";
+        for (int i = 0; i < argc; ++i) f << " " << argv[i];
+        f << "\n\nsource -> ground truth used (pitch/roll before -> after overrides)\n";
+        std::cout << "Reprocessing " << jobs.size() << " recording(s):\n";
+        for (const auto& j : jobs) {
+            std::ostringstream l;
+            l << "  " << j.run_ts << " t" << j.index << ": pitch " << fmt(j.orig_pitch, 2)
+              << " -> " << fmt(j.o.setup.pitch_deg, 2) << ", roll " << fmt(j.orig_roll, 2)
+              << " -> " << fmt(j.o.setup.roll_deg, 2) << "   " << j.bag << "\n";
+            std::cout << l.str();
+            f << l.str();
+        }
+    }
 
     const char* W_IR = "IR (left) + ROI", *W_DEPTH = "Depth + ROI",
               * W_ERR = "ROI error map", *W_COLOR = "Colour (context only, not aligned)";
-    cv::namedWindow(W_IR,    cv::WINDOW_NORMAL); cv::resizeWindow(W_IR,    960, 540);
-    cv::namedWindow(W_DEPTH, cv::WINDOW_NORMAL); cv::resizeWindow(W_DEPTH, 640, 360);
-    cv::namedWindow(W_ERR,   cv::WINDOW_NORMAL); cv::resizeWindow(W_ERR,   640, 360);
-    if (o.use_color) { cv::namedWindow(W_COLOR, cv::WINDOW_NORMAL); cv::resizeWindow(W_COLOR, 480, 270); }
+    if (show) {
+        cv::namedWindow(W_IR,    cv::WINDOW_NORMAL); cv::resizeWindow(W_IR,    960, 540);
+        cv::namedWindow(W_DEPTH, cv::WINDOW_NORMAL); cv::resizeWindow(W_DEPTH, 640, 360);
+        cv::namedWindow(W_ERR,   cv::WINDOW_NORMAL); cv::resizeWindow(W_ERR,   640, 360);
+        if (cli.use_color) { cv::namedWindow(W_COLOR, cv::WINDOW_NORMAL); cv::resizeWindow(W_COLOR, 480, 270); }
+    }
 
-    PipelineCtx   ctx;
     DepthAnalyzer analyzer;
-    int  trial_index  = 0;
-    bool keep_running = true;
+    Options       live        = cli;     // live mode: edited at the prompt between trials
+    int           trial_index = 0;
+    size_t        job_i       = 0;
+    bool          ask         = false;   // live mode: prompt before the next trial
 
-    while (keep_running && g_running)
+    while (g_running)
     {
+        // Prompt at the top of the loop, after the previous trial's pipeline and
+        // device handles have gone out of scope: the recorder only writes the bag
+        // index when it is destroyed, so a kill at the prompt can no longer leave
+        // an unindexed (unreadable) recording behind.
+        if (ask) {
+            if (!prompt_next_trial(live)) break;
+            ask = false;
+        }
+
+        // Reprocessing walks the job list; live capture uses the prompt.
+        TrialJob* job = nullptr;
+        if (reprocess) {
+            if (job_i >= jobs.size()) break;
+            job = &jobs[job_i++];
+        }
+        Options& o = job ? job->o : live;
+
         if (std::fabs(o.setup.pitch_deg) > 80 || std::fabs(o.setup.roll_deg) > 80) {
+            if (job) {
+                std::cerr << "Skipping " << job->bag << ": |pitch| and |roll| must be below 80 degrees.\n";
+                continue;
+            }
             std::cerr << "|pitch| and |roll| must be below 80 degrees — please re-enter.\n";
-            keep_running = prompt_next_trial(o);
+            ask = true;
             continue;
         }
 
         // ── Trial folder / file names ─────────────────────────────────────────
-        const std::string name        = trial_name(run_ts, trial_index, o.setup);
-        const std::string trial_dir   = make_session_dir(session_root, name);
-        const std::string record_file = o.record ? trial_dir + "/" + name + o.bag_ext : "";
-        const std::string csv_file    = trial_dir + "/" + name + "_metrics.csv";
-        const std::string info_file   = trial_dir + "/trial_info.txt";
+        const int         t_idx        = job ? job->index : trial_index;
+        const std::string run_dir      = job ? job->out_run_dir : session_root;
+        const std::string summary_file = run_dir + "/summary.csv";
+        const std::string name         = trial_name(job ? job->run_ts : run_ts, t_idx, o.setup);
+        const std::string trial_dir    = run_dir + "/" + name;
+        const std::string record_file  = o.record ? trial_dir + "/" + name + o.bag_ext : "";
+        const std::string csv_file     = trial_dir + "/" + name + "_metrics.csv";
+        const std::string info_file    = trial_dir + "/trial_info.txt";
 
-        ctx = start_pipeline_retry(record_file, o, 5);
+        PipelineCtx ctx;
+        if (job) {
+            try {
+                ctx = start_playback(job->bag);
+            } catch (const rs2::error& e) {
+                std::cerr << "Skipping " << job->bag << ": cannot open recording (" << e.what() << ")\n";
+                continue;
+            }
+            make_session_dir(run_dir, name);
+        } else {
+            make_session_dir(run_dir, name);
+            ctx = start_pipeline_retry(record_file, o, 5);
+        }
 
         std::ofstream csv = open_metrics_csv(csv_file);
         if (!csv.is_open()) { std::cerr << "Failed to open CSV: " << csv_file << "\n"; return 1; }
@@ -1042,7 +1314,8 @@ int main(int argc, char* argv[])
         auto dprof = ctx.profile.get_stream(RS2_STREAM_DEPTH).as<rs2::video_stream_profile>();
         rs2_intrinsics intr     = dprof.get_intrinsics();
         const double   scale_m  = ds.get_depth_scale();
-        const double   baseline = stereo_baseline_mm(ds, ctx.profile);
+        double         baseline = stereo_baseline_mm(ds, ctx.profile);
+        if (baseline <= 0 && job) baseline = job->baseline_mm;   // IR2 is not in the recording
 
         analyzer.configure(intr, scale_m, baseline);
 
@@ -1054,6 +1327,7 @@ int main(int argc, char* argv[])
             roi = centred_roi(intr.width, intr.height, o.roi_pct);
         }
         analyzer.set_roi(roi);
+        cv::Rect roi_start = roi;   // before any patch seeding; logged so a reprocess can reuse it
 
         const GroundTruth gt = make_gt(o.setup, o.gt_offset_mm);
         analyzer.set_gt(gt);
@@ -1089,7 +1363,7 @@ int main(int argc, char* argv[])
         };
 
         std::cout << "\n" << std::string(60, '=') << "\n"
-                  << "Trial   : " << trial_index << "  (" << name << ")\n"
+                  << "Trial   : " << t_idx << "  (" << name << ")\n"
                   << "Device  : " << info(RS2_CAMERA_INFO_NAME) << "  S/N " << info(RS2_CAMERA_INFO_SERIAL_NUMBER)
                   << "  FW " << info(RS2_CAMERA_INFO_FIRMWARE_VERSION) << "\n"
                   << "Streams : Depth+IR " << intr.width << "x" << intr.height << "@" << o.fps
@@ -1107,37 +1381,47 @@ int main(int argc, char* argv[])
                         ? "perp " + fmt(gt.H_mm, 1) + " mm, axis " + fmt(gt.axis_mm, 1) + " mm, pitch "
                           + fmt(gt.pitch_deg, 2) + ", roll " + fmt(gt.roll_deg, 2)
                         : std::string("none (errors shown relative to fitted plane)")) << "\n"
-                  << "Record  : " << (record_file.empty() ? "off" : record_file) << "\n"
+                  << (job ? "Source  : " + job->bag + "\nSelect  : "
+                            + (job->frame_keys.empty() ? std::string("every recorded frame")
+                               : "the " + std::to_string(job->frame_keys.size()) + " frames of the original run")
+                          : "Record  : " + (record_file.empty() ? std::string("off") : record_file)) << "\n"
                   << "CSV     : " << csv_file << "\n"
                   << (o.duration_sec > 0 ? "Duration: " + std::to_string(o.duration_sec) + "s\n" : "")
                   << (o.frame_limit  > 0 ? "Frames  : " + std::to_string(o.frame_limit) + "\n" : "")
-                  << "Keys    : q/Esc end trial | r re-select ROI | s snapshot\n"
+                  << (show ? "Keys    : q/Esc end trial | r re-select ROI | s snapshot\n" : "")
                   << std::string(60, '-') << "\n";
 
         DepthFilters   filters(o.min_dist, o.max_dist);
         rs2::colorizer colorizer;
 
         auto       t_start      = std::chrono::steady_clock::now();
+        double     first_dev_ts = NaN, media_ms = 0.0;   // reprocess: time within the recording
+        auto elapsed_s = [&]() {
+            return job ? media_ms / 1000.0
+                       : std::chrono::duration<double>(std::chrono::steady_clock::now() - t_start).count();
+        };
         long long  frame_count  = 0;
         rs2_vector last_accel{NAN, NAN, NAN};
+        long long  last_depth_key = std::numeric_limits<long long>::min();
         bool       pending_select = o.select_roi;
         bool       warned_pitch = false, warned_roll = false, warned_dist = false;
         std::vector<FrameMetrics> history;
 
         while (g_running) {
-            if (o.duration_sec > 0) {
-                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-                    std::chrono::steady_clock::now() - t_start).count();
-                if (elapsed >= o.duration_sec) break;
-            }
+            if (o.duration_sec > 0 && elapsed_s() >= o.duration_sec) break;
             if (o.frame_limit > 0 && frame_count >= o.frame_limit) break;
 
             rs2::frameset frames;
-            try {
-                frames = ctx.pipe.wait_for_frames();
-            } catch (const rs2::error& e) {
-                std::cerr << "wait_for_frames: " << e.what() << "\n";
-                continue;
+            if (job) {
+                // Playback is not real-time, so a timeout means the recording has ended.
+                if (!ctx.pipe.try_wait_for_frames(&frames, 5000)) break;
+            } else {
+                try {
+                    frames = ctx.pipe.wait_for_frames();
+                } catch (const rs2::error& e) {
+                    std::cerr << "wait_for_frames: " << e.what() << "\n";
+                    continue;
+                }
             }
 
             if (auto a = frames.first_or_default(RS2_STREAM_ACCEL))
@@ -1145,6 +1429,18 @@ int main(int argc, char* argv[])
 
             rs2::depth_frame raw_depth = frames.get_depth_frame();
             if (!raw_depth) continue;
+            // With the IMU streaming, the syncer can hand over the same depth frame in
+            // consecutive framesets; analyse each depth frame once.
+            const long long depth_key = ts_key(raw_depth.get_timestamp());
+            if (depth_key == last_depth_key) continue;
+            last_depth_key = depth_key;
+            if (job && !job->frame_keys.empty()) {
+                // Only the frames the original run analysed (it drops frames it
+                // cannot keep up with, and the recording starts before its loop).
+                const long long k = depth_key;
+                if (!job->frame_keys.count(k) && !job->frame_keys.count(k - 1) && !job->frame_keys.count(k + 1))
+                    continue;
+            }
             rs2::video_frame ir = frames.get_infrared_frame(1);
             rs2::video_frame color{rs2::frame{}};
             if (o.use_color) color = frames.get_color_frame();
@@ -1165,6 +1461,7 @@ int main(int argc, char* argv[])
                 if (sel.area() > 0) {
                     analyzer.set_roi(sel);
                     o.roi = analyzer.roi(); o.roi_given = true;
+                    roi_start = o.roi;
                     anchor_ray = ray_through(o.roi);   // re-anchor the tracked patch
                     patch = PatchROI{};
                     history.clear();
@@ -1180,7 +1477,11 @@ int main(int argc, char* argv[])
             // ── Metrics ───────────────────────────────────────────────────────
             FrameMetrics m  = analyzer.analyze(depth);
             m.frame         = frame_count;
-            m.ts_ms         = std::chrono::duration<double, std::milli>(
+            if (job) {
+                if (!std::isfinite(first_dev_ts)) first_dev_ts = raw_depth.get_timestamp();
+                media_ms = raw_depth.get_timestamp() - first_dev_ts;
+            }
+            m.ts_ms         = job ? media_ms : std::chrono::duration<double, std::milli>(
                                   std::chrono::steady_clock::now() - t_start).count();
             m.device_ts_ms  = raw_depth.get_timestamp();
             m.exposure      = frame_md(raw_depth, RS2_FRAME_METADATA_ACTUAL_EXPOSURE);
@@ -1211,64 +1512,66 @@ int main(int argc, char* argv[])
             }
 
             // ── Display ───────────────────────────────────────────────────────
-            const cv::Rect& r = analyzer.roi();
-            cv::rectangle(ir_bgr, r, cv::Scalar(0, 255, 0), 2);
-            if (o.patch_size > 0 && patch.ok)           // the square patch itself, in amber
-                for (int i = 0; i < 4; ++i)
-                    cv::line(ir_bgr, patch.quad[i], patch.quad[(i + 1) % 4],
-                             cv::Scalar(0, 200, 255), 1, cv::LINE_AA);
-            std::vector<std::string> lines = {
-                "Trial " + std::to_string(trial_index) + "  frame " + std::to_string(frame_count)
-                    + (o.setup.label.empty() ? "" : "  [" + o.setup.label + "]"),
-                "Fill " + fmt(m.fill_pct, 1) + "%   mean Z " + fmt(m.mean_z_mm, 1) + " mm",
-            };
-            if (m.has_gt) {
-                lines.push_back("GT axis " + fmt(gt.axis_mm, 1) + " mm  pitch " + fmt(gt.pitch_deg, 1)
-                                + "  roll " + fmt(gt.roll_deg, 1));
-                lines.push_back("Z err median " + fmt(m.z_err_median_mm, 2) + " mm ("
-                                + fmt(m.z_err_median_pct, 2) + "%)  RMSE " + fmt(m.z_err_rmse_mm, 2) + " mm");
-            }
-            if (m.plane_ok) {
-                lines.push_back("Plane RMS " + fmt(m.plane_rms_mm, 2) + " mm (" + fmt(m.plane_rms_pct, 2)
-                                + "%)  subpix " + fmt(m.subpixel_rms_px, 3) + " px");
-                lines.push_back("Fit: axis " + fmt(m.plane_dist_axis_mm, 1) + " mm  pitch "
-                                + fmt(m.plane_pitch_deg, 2) + "  roll " + fmt(m.plane_roll_deg, 2));
-            }
-            if (o.patch_size > 0)
-                lines.push_back("Patch " + fmt(o.patch_size, 0) + " mm -> ROI "
-                                + std::to_string(r.width) + "x" + std::to_string(r.height) + " px"
-                                + (patch.ok ? "  @ " + fmt(patch.centre_axis_mm, 0) + " mm"
-                                            : std::string("  (no plane yet)")));
-            lines.push_back("IR mean " + fmt(m.ir_mean, 1) + "   exposure " + fmt(m.exposure, 0));
-            draw_text_block(ir_bgr, lines, cv::Point(15, 30));
+            if (show) {
+                const cv::Rect& r = analyzer.roi();
+                cv::rectangle(ir_bgr, r, cv::Scalar(0, 255, 0), 2);
+                if (o.patch_size > 0 && patch.ok)           // the square patch itself, in amber
+                    for (int i = 0; i < 4; ++i)
+                        cv::line(ir_bgr, patch.quad[i], patch.quad[(i + 1) % 4],
+                                 cv::Scalar(0, 200, 255), 1, cv::LINE_AA);
+                std::vector<std::string> lines = {
+                    "Trial " + std::to_string(t_idx) + "  frame " + std::to_string(frame_count)
+                        + (o.setup.label.empty() ? "" : "  [" + o.setup.label + "]"),
+                    "Fill " + fmt(m.fill_pct, 1) + "%   mean Z " + fmt(m.mean_z_mm, 1) + " mm",
+                };
+                if (m.has_gt) {
+                    lines.push_back("GT axis " + fmt(gt.axis_mm, 1) + " mm  pitch " + fmt(gt.pitch_deg, 1)
+                                    + "  roll " + fmt(gt.roll_deg, 1));
+                    lines.push_back("Z err median " + fmt(m.z_err_median_mm, 2) + " mm ("
+                                    + fmt(m.z_err_median_pct, 2) + "%)  RMSE " + fmt(m.z_err_rmse_mm, 2) + " mm");
+                }
+                if (m.plane_ok) {
+                    lines.push_back("Plane RMS " + fmt(m.plane_rms_mm, 2) + " mm (" + fmt(m.plane_rms_pct, 2)
+                                    + "%)  subpix " + fmt(m.subpixel_rms_px, 3) + " px");
+                    lines.push_back("Fit: axis " + fmt(m.plane_dist_axis_mm, 1) + " mm  pitch "
+                                    + fmt(m.plane_pitch_deg, 2) + "  roll " + fmt(m.plane_roll_deg, 2));
+                }
+                if (o.patch_size > 0)
+                    lines.push_back("Patch " + fmt(o.patch_size, 0) + " mm -> ROI "
+                                    + std::to_string(r.width) + "x" + std::to_string(r.height) + " px"
+                                    + (patch.ok ? "  @ " + fmt(patch.centre_axis_mm, 0) + " mm"
+                                                : std::string("  (no plane yet)")));
+                lines.push_back("IR mean " + fmt(m.ir_mean, 1) + "   exposure " + fmt(m.exposure, 0));
+                draw_text_block(ir_bgr, lines, cv::Point(15, 30));
 
-            auto dcol = colorizer.colorize(depth).as<rs2::video_frame>();
-            cv::Mat depth_bgr = rgb_to_bgr(dcol);
-            cv::rectangle(depth_bgr, r, cv::Scalar(255, 255, 255), 2);
+                auto dcol = colorizer.colorize(depth).as<rs2::video_frame>();
+                cv::Mat depth_bgr = rgb_to_bgr(dcol);
+                cv::rectangle(depth_bgr, r, cv::Scalar(255, 255, 255), 2);
 
-            cv::Mat err_bgr = render_error_map(analyzer.error_map(), o.err_range_mm);
-            if (err_bgr.cols < 480) {
-                double k = 480.0 / err_bgr.cols;
-                cv::resize(err_bgr, err_bgr, cv::Size(), k, k, cv::INTER_NEAREST);
-            }
-            draw_text_block(err_bgr, {
-                std::string(gt.valid ? "vs ground truth" : "vs fitted plane") + "  blue=closer red=farther",
-                "range +/-" + fmt(o.err_range_mm, 1) + " mm, black = hole"}, cv::Point(10, 25), 0.5);
+                cv::Mat err_bgr = render_error_map(analyzer.error_map(), o.err_range_mm);
+                if (err_bgr.cols < 480) {
+                    double k = 480.0 / err_bgr.cols;
+                    cv::resize(err_bgr, err_bgr, cv::Size(), k, k, cv::INTER_NEAREST);
+                }
+                draw_text_block(err_bgr, {
+                    std::string(gt.valid ? "vs ground truth" : "vs fitted plane") + "  blue=closer red=farther",
+                    "range +/-" + fmt(o.err_range_mm, 1) + " mm, black = hole"}, cv::Point(10, 25), 0.5);
 
-            cv::imshow(W_IR, ir_bgr);
-            cv::imshow(W_DEPTH, depth_bgr);
-            cv::imshow(W_ERR, err_bgr);
-            if (o.use_color && color) cv::imshow(W_COLOR, rgb_to_bgr(color));
+                cv::imshow(W_IR, ir_bgr);
+                cv::imshow(W_DEPTH, depth_bgr);
+                cv::imshow(W_ERR, err_bgr);
+                if (o.use_color && color) cv::imshow(W_COLOR, rgb_to_bgr(color));
 
-            int key = cv::waitKey(1) & 0xFF;
-            if (key == 'q' || key == 27) break;
-            if (key == 'r') pending_select = true;
-            if (key == 's') {
-                std::string base = trial_dir + "/snap_f" + std::to_string(frame_count);
-                cv::imwrite(base + "_ir.png", ir_bgr);
-                cv::imwrite(base + "_depth.png", depth_bgr);
-                cv::imwrite(base + "_err.png", err_bgr);
-                std::cout << "Saved snapshot " << base << "_*.png\n";
+                int key = cv::waitKey(1) & 0xFF;
+                if (key == 'q' || key == 27) break;
+                if (key == 'r') pending_select = true;
+                if (key == 's') {
+                    std::string base = trial_dir + "/snap_f" + std::to_string(frame_count);
+                    cv::imwrite(base + "_ir.png", ir_bgr);
+                    cv::imwrite(base + "_depth.png", depth_bgr);
+                    cv::imwrite(base + "_err.png", err_bgr);
+                    std::cout << "Saved snapshot " << base << "_*.png\n";
+                }
             }
 
             // ── Dynamic ROI: re-project the patch for the next frame ─────────
@@ -1319,8 +1622,7 @@ int main(int argc, char* argv[])
         csv.close();
 
         // ── Trial summary ─────────────────────────────────────────────────────
-        const double elapsed = std::chrono::duration<double>(
-            std::chrono::steady_clock::now() - t_start).count();
+        const double elapsed = elapsed_s();
         const int    n_frames = int(history.size());
         const double tnoise   = analyzer.temporal_noise_median_mm(std::max(2, n_frames / 2));
         const cv::Rect& r     = analyzer.roi();
@@ -1352,7 +1654,7 @@ int main(int argc, char* argv[])
 
         {
             std::ofstream f(info_file);
-            f << "trial: "        << trial_index << "\nname: " << name << "\n"
+            f << "trial: "        << t_idx << "\nname: " << name << "\n"
               << "device: "       << info(RS2_CAMERA_INFO_NAME)
               << "\nserial: "     << info(RS2_CAMERA_INFO_SERIAL_NUMBER)
               << "\nfirmware: "   << info(RS2_CAMERA_INFO_FIRMWARE_VERSION) << "\n"
@@ -1365,14 +1667,26 @@ int main(int argc, char* argv[])
               << "intrinsics: fx=" << intr.fx << " fy=" << intr.fy << " ppx=" << intr.ppx << " ppy=" << intr.ppy << "\n"
               << "depth_scale_m: " << scale_m << "\nbaseline_mm: " << baseline << "\n"
               << "preset: "       << o.preset << "\nfilters: " << o.use_filters << "\n"
+              << "min_dist_m: "   << o.min_dist << "\nmax_dist_m: " << o.max_dist << "\n"
               << "emitter_set: "  << o.emitter << "\nlaser_power_set: " << o.laser_power
               << "\nexposure_set_us: " << o.exposure_us << "\n"
               << "roi: "          << r.x << "," << r.y << "," << r.width << "," << r.height
               << (o.patch_size > 0 ? "   (last frame; ROI is tracked)" : "") << "\n"
+              << "roi_start: "    << roi_start.x << "," << roi_start.y << ","
+              << roi_start.width << "," << roi_start.height << "\nroi_pct: " << o.roi_pct << "\n"
               << "patch_size_mm: " << o.patch_size << "   (0 = static ROI)\n"
               << "patch_roi_mode: " << (o.patch_size > 0 ? (o.patch_outer ? "outer" : "inner") : "n/a")
               << "\npatch_smooth: " << o.patch_smooth << "\npatch_hyst_px: " << o.patch_hyst_px << "\n"
-              << "record: "       << record_file << "\n\n" << sum.str();
+              << "record: "       << record_file << "\n";
+            if (job)
+                f << "reprocessed_from: " << job->bag << "\n"
+                  << "source_info: "      << job->info_file << "\n"
+                  << "source_pitch_deg: " << job->orig_pitch << "\nsource_roll_deg: " << job->orig_roll << "\n"
+                  << "frame_selection: " << (job->frame_keys.empty()
+                        ? std::string("all recorded frames")
+                        : "the " + std::to_string(job->frame_keys.size()) + " distinct frames of "
+                          + job->orig_csv + " (" + std::to_string(n_frames) + " analysed)") << "\n";
+            f << "\n" << sum.str();
         }
 
         {
@@ -1386,7 +1700,7 @@ int main(int argc, char* argv[])
                 for (const auto& fl : SUMMARY_FIELDS) f << "," << fl.name << "_mean," << fl.name << "_std";
                 f << "\n";
             }
-            f << trial_index << "," << name << "," << sanitize(o.setup.label) << ",";
+            f << t_idx << "," << name << "," << sanitize(o.setup.label) << ",";
             csv_num(f, o.setup.height_mm, 2); f << ",";
             csv_num(f, o.setup.axis_mm, 2);   f << ",";
             csv_num(f, o.setup.pitch_deg, 2); f << ",";
@@ -1415,12 +1729,10 @@ int main(int argc, char* argv[])
                   << "Summary : " << summary_file << "\n";
         if (!record_file.empty()) std::cout << "Bag     : " << record_file << "\n";
 
-        if (!g_running) break;
-        keep_running = prompt_next_trial(o);
-        ++trial_index;
+        if (!job) { ask = true; ++trial_index; }
     } // end trial loop
 
-    cv::destroyAllWindows();
+    if (show) cv::destroyAllWindows();
     std::cout << "Done. Results in " << session_root << "\n";
     return 0;
 }
