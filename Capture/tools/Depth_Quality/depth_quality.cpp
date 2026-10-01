@@ -85,6 +85,7 @@ struct Options {
     int         print_every  = 1;
     double      err_range_mm = 10.0;
     double      gt_offset_mm = 0.0;
+    double      depth_scale_m = 0.0;
     // ROI
     bool        roi_given  = false;
     cv::Rect    roi;
@@ -1047,6 +1048,7 @@ struct TrialJob {
     int         index       = 0;
     double      baseline_mm = 0.0;  // from trial_info, in case the recording lacks it
     double      orig_pitch  = NaN, orig_roll = NaN;
+    double      depth_scale_m = 0.0;
     std::string orig_csv;           // original metrics CSV, if any
     std::set<long long> frame_keys; // frames it analysed (ts_key); empty = use every frame
     Options     o;
@@ -1119,6 +1121,7 @@ static bool load_trial_info(const std::string& path, Options& o, int& index, dou
             else if (k == "patch_roi_mode")  o.patch_outer     = v.rfind("outer", 0) == 0;
             else if (k == "patch_smooth")    o.patch_smooth    = std::stod(v);
             else if (k == "patch_hyst_px")   o.patch_hyst_px   = std::stoi(v);
+            else if (k == "depth_scale_m")   o.depth_scale_m = std::stod(v);
         } catch (...) {
             std::cerr << "  " << path << ": bad value for '" << k << "': " << v << "\n";
         }
@@ -1313,7 +1316,12 @@ int main(int argc, char* argv[])
         auto ds    = dev.first<rs2::depth_sensor>();
         auto dprof = ctx.profile.get_stream(RS2_STREAM_DEPTH).as<rs2::video_stream_profile>();
         rs2_intrinsics intr     = dprof.get_intrinsics();
-        const double   scale_m  = ds.get_depth_scale();
+        double scale_m = ds.get_depth_scale();
+        if (job && job->o.depth_scale_m > 0 && std::fabs(scale_m - job->o.depth_scale_m) > 1e-9) {
+            std::cout << "Depth scale: recording reports " << scale_m << ", trial_info says "
+                    << job->o.depth_scale_m << " -- using trial_info.\n";
+            scale_m = job->o.depth_scale_m;
+        }
         double         baseline = stereo_baseline_mm(ds, ctx.profile);
         if (baseline <= 0 && job) baseline = job->baseline_mm;   // IR2 is not in the recording
 
