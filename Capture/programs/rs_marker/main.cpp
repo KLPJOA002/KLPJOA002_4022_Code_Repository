@@ -11,6 +11,7 @@
 #include <fstream>
 #include <ctime>
 #include <set>
+#include <sstream>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <thread>
@@ -22,6 +23,7 @@ static void signal_handler(int) { g_running = false; }
 static void print_usage(const char* prog)
 {
     std::cout << "Usage: " << prog << " [-o output.bag] [-D output_dir] [-d duration_seconds] [-n frames] [-test] [-id]\n"
+              << "          [-r WxH] [--fps N] [-u depth_units_m] [-p preset] [-b START:END]\n"
               << "  -o, --output    Record to .bag file (default: no recording)\n"
               << "                  In -test mode: video output path (default: detections_test.mp4)\n"
               << "  -D, --dir       Save bag + CSV into <output_dir>/<YYYYMMDD_HHMMSS>/\n"
@@ -32,6 +34,15 @@ static void print_usage(const char* prog)
               << "  -nTags N        Expected tags in view; if fewer are found, rerun detection on\n"
               << "                  an illumination-flattened image (default: 4, 0 = off)\n"
               << "  -debugTags      Overlay rejected tag candidates (red) + counts on RGB window\n"
+              << "  -r, --res WxH   Depth + colour resolution     (default: 1280x720)\n"
+              << "      --fps N     Depth + colour frame rate      (default: 30)\n"
+              << "  -u, --units M   Depth units in metres          (default: 0.0001 = 0.1 mm)\n"
+              << "  -p, --preset P  Visual preset, applied BEFORE the other depth options (default: high_density)\n"
+              << "                  default|high_density|high_accuracy|medium_density|hand|remove_ir_pattern\n"
+              << "  -b, --best-range START:END\n"
+              << "                  Choose the best frame (fewest holes) only from frames START..END\n"
+              << "                  (inclusive, 0-based; either end may be left open, e.g. 30: or :90)\n"
+              << "                  (default: all frames)\n"
               << "  -h, --help      Show this message\n";
 }
 
@@ -80,15 +91,66 @@ struct PipelineCtx {
     rs2::pipeline_profile profile;
 };
 
-static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode)
+// Camera settings chosen on the command line (-r, --fps, -u, -p)
+struct CamConfig {
+    int         width       = 1280;
+    int         height      = 720;
+    int         fps         = 30;
+    float       depth_units = 0.0001f;        // 0.1 mm (device default is 0.001 = 1 mm)
+    std::string preset      = "high_density";
+};
+
+static int preset_value(const std::string& name)
+{
+    if (name == "default")           return RS2_RS400_VISUAL_PRESET_DEFAULT;
+    if (name == "high_density")      return RS2_RS400_VISUAL_PRESET_HIGH_DENSITY;
+    if (name == "high_accuracy")     return RS2_RS400_VISUAL_PRESET_HIGH_ACCURACY;
+    if (name == "medium_density")    return RS2_RS400_VISUAL_PRESET_MEDIUM_DENSITY;
+    if (name == "hand")              return RS2_RS400_VISUAL_PRESET_HAND;
+    if (name == "remove_ir_pattern") return RS2_RS400_VISUAL_PRESET_REMOVE_IR_PATTERN;
+    return -1;
+}
+
+static void try_set(rs2::sensor& s, rs2_option opt, float val, const char* name)
+{
+    try {
+        if (s.supports(opt)) s.set_option(opt, val);
+        else std::cerr << "  (" << name << " not supported on this device)\n";
+    } catch (const rs2::error& e) {
+        std::cerr << "  Failed to set " << name << ": " << e.what() << "\n";
+    }
+}
+
+// Preset goes FIRST: loading a preset rewrites many depth controls, so anything
+// set before it would be overwritten.
+static void apply_depth_settings(rs2::depth_sensor& ds, const CamConfig& cam)
+{
+    try_set(ds, RS2_OPTION_VISUAL_PRESET, float(preset_value(cam.preset)), "visual preset");
+    try_set(ds, RS2_OPTION_DEPTH_UNITS, cam.depth_units, "depth units");
+    try_set(ds, RS2_OPTION_THERMAL_COMPENSATION, 0.0f, "thermal compensation");
+}
+
+static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode, const CamConfig& cam)
 {
     PipelineCtx ctx;
     rs2::config cfg;
+
+    // Apply the depth settings before streaming starts so the recording's header
+    // carries the right depth scale. Options persist on the device across start().
+    rs2::context rs_ctx;
+    auto devices = rs_ctx.query_devices();
+    if (devices.size() > 0) {
+        rs2::device dev = devices[0];
+        auto ds = dev.first<rs2::depth_sensor>();
+        apply_depth_settings(ds, cam);
+        cfg.enable_device(dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
+    }
+
     if (test_mode) {
-        cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8, 30);
+        cfg.enable_stream(RS2_STREAM_COLOR, 0, cam.width, cam.height, RS2_FORMAT_RGB8, cam.fps);
     } else {
-        cfg.enable_stream(RS2_STREAM_DEPTH, 0, 1280, 720, RS2_FORMAT_Z16,        30);
-        cfg.enable_stream(RS2_STREAM_COLOR, 0, 1280, 720, RS2_FORMAT_RGB8,       30);
+        cfg.enable_stream(RS2_STREAM_DEPTH, 0, cam.width, cam.height, RS2_FORMAT_Z16,  cam.fps);
+        cfg.enable_stream(RS2_STREAM_COLOR, 0, cam.width, cam.height, RS2_FORMAT_RGB8, cam.fps);
         cfg.enable_stream(RS2_STREAM_ACCEL,             RS2_FORMAT_MOTION_XYZ32F);
         cfg.enable_stream(RS2_STREAM_GYRO,              RS2_FORMAT_MOTION_XYZ32F);
         if (!output_file.empty())
@@ -96,26 +158,23 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
     }
     ctx.profile = ctx.pipe.start(cfg);//start the pipeline with the cfg configuration
 
-    auto depth_sensor = ctx.profile.get_device().first<rs2::depth_sensor>();
-    if (depth_sensor.supports(RS2_OPTION_VISUAL_PRESET))
-        depth_sensor.set_option(RS2_OPTION_VISUAL_PRESET,
-                                RS2_RS400_VISUAL_PRESET_HIGH_DENSITY);
-
-    if (depth_sensor.supports(RS2_OPTION_DEPTH_UNITS))
-        depth_sensor.set_option(RS2_OPTION_DEPTH_UNITS, 0.0001f); //change depth units from 0.001(1mm) default to 0.0001(0.1mm)
-
-    if (depth_sensor.supports(RS2_OPTION_THERMAL_COMPENSATION))
-        depth_sensor.set_option(RS2_OPTION_THERMAL_COMPENSATION, 0);
+    // Check the settings survived the stream start; re-apply (preset first) if not
+    auto ds = ctx.profile.get_device().first<rs2::depth_sensor>();
+    if (std::fabs(ds.get_depth_scale() - cam.depth_units) > 1e-9f) {
+        std::cerr << "Depth units read back as " << ds.get_depth_scale()
+                  << " after start, re-applying " << cam.depth_units << "\n";
+        apply_depth_settings(ds, cam);
+    }
     return ctx;
 }
 
 
 static PipelineCtx start_pipeline_retry(const std::string& output_file, bool test_mode,
-                                         int max_attempts = 5)
+                                         const CamConfig& cam, int max_attempts = 5)
 {
     for (int attempt = 1; attempt <= max_attempts; ++attempt) {
         try {
-            return start_pipeline(output_file, test_mode);
+            return start_pipeline(output_file, test_mode, cam);
         } catch (const rs2::error& e) {
             std::cerr << "start_pipeline attempt " << attempt << " failed: "
                       << e.what() << " — retrying...\n";
@@ -223,6 +282,19 @@ static void write_imu_csv(const std::string& path, long long frame, double times
       << frame << "," << timestamp_ms << ","
       << accel.x << "," << accel.y << "," << accel.z << ","
       << gyro.x  << "," << gyro.y  << "," << gyro.z  << "\n";
+}
+
+// "A:B", "A:" or ":B" → inclusive frame range; hi = -1 means "to the end".
+static bool parse_range(const std::string& s, long long& lo, long long& hi)
+{
+    const auto colon = s.find(':');
+    if (colon == std::string::npos) return false;
+    try {
+        const std::string a = s.substr(0, colon), b = s.substr(colon + 1);
+        lo = a.empty() ? 0  : std::stoll(a);
+        hi = b.empty() ? -1 : std::stoll(b);
+    } catch (const std::exception&) { return false; }
+    return lo >= 0 && (hi < 0 || hi >= lo);
 }
 
 // depth_arg may be an empty frame (test mode) — depth_m written as 0.0 in that case.
@@ -588,6 +660,96 @@ static std::string make_session_dir(const std::string& parent, const std::string
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// "key: value" for every option a sensor / filter exposes, as read back now.
+static void dump_options(std::ostream& f, const std::string& prefix, rs2::options o)
+{
+    for (rs2_option opt : o.get_supported_options()) {
+        try {
+            const float v = o.get_option(opt);
+            f << prefix << rs2_option_to_string(opt) << ": " << v;
+            if (const char* desc = o.get_option_value_description(opt, v))
+                f << "  (" << desc << ")";
+            f << "\n";
+        } catch (const rs2::error&) {}   // some options are unreadable in some states
+    }
+}
+
+// Full configuration of one scan, for post analysis. Read from the live device,
+// so it must be called before pipe.stop(). `results` holds the per-scan outcome
+// (mode, angle, best frame, files...) already formatted as "key: value" lines.
+static void write_scan_info(const std::string& path, const std::string& cmdline,
+                            const CamConfig& cam, const PipelineCtx& ctx,
+                            DepthFilters& filters, int expected_tags,
+                            const std::string& results)
+{
+    std::ofstream f(path);
+    if (!f.is_open()) { std::cerr << "Failed to open " << path << "\n"; return; }
+    f << std::setprecision(9);
+
+    f << "# rs_marker scan configuration\n"
+      << "written: " << timestamp_str() << "\n"
+      << "command: " << cmdline << "\n"
+      << results;
+
+    f << "\n# requested\n"
+      << "resolution: " << cam.width << "x" << cam.height << "@" << cam.fps << "\n"
+      << "preset: "      << cam.preset << "\n"
+      << "depth_units_m: " << cam.depth_units << "\n";
+
+    rs2::device dev = ctx.profile.get_device();
+    f << "\n# device\n";
+    for (int i = 0; i < RS2_CAMERA_INFO_COUNT; ++i) {
+        const auto ci = rs2_camera_info(i);
+        if (dev.supports(ci))
+            f << "device." << rs2_camera_info_to_string(ci) << ": " << dev.get_info(ci) << "\n";
+    }
+
+    f << "\n# streams (actual)\n";
+    for (auto& sp : ctx.profile.get_streams()) {
+        const std::string name = sp.stream_name();
+        f << "stream." << name << ": " << rs2_format_to_string(sp.format()) << " @" << sp.fps() << "fps";
+        if (auto vp = sp.as<rs2::video_stream_profile>()) {
+            const rs2_intrinsics in = vp.get_intrinsics();
+            f << " " << in.width << "x" << in.height << "\n"
+              << "stream." << name << ".intrinsics: fx=" << in.fx << " fy=" << in.fy
+              << " ppx=" << in.ppx << " ppy=" << in.ppy
+              << " model=" << rs2_distortion_to_string(in.model) << " coeffs="
+              << in.coeffs[0] << "," << in.coeffs[1] << "," << in.coeffs[2] << ","
+              << in.coeffs[3] << "," << in.coeffs[4] << "\n";
+        } else {
+            f << "\n";
+        }
+    }
+
+    // Read back from the device: what was actually in effect for this scan
+    f << "\n# sensor options (actual)\n";
+    auto ds = dev.first<rs2::depth_sensor>();
+    f << "depth_scale_m: " << ds.get_depth_scale() << "\n";
+    for (auto& s : dev.query_sensors()) {
+        const std::string sname = s.supports(RS2_CAMERA_INFO_NAME) ? s.get_info(RS2_CAMERA_INFO_NAME) : "sensor";
+        dump_options(f, sname + ".", s);
+    }
+
+    f << "\n# depth post-processing (depth aligned to colour before filtering)\n"
+      << "filter_chain: threshold > to_disparity > spatial > temporal > to_depth > hole_fill  (decimation off)\n";
+    dump_options(f, "filter.threshold.", filters.threshold);
+    dump_options(f, "filter.spatial.",   filters.spatial);
+    dump_options(f, "filter.temporal.",  filters.temporal);
+    dump_options(f, "filter.hole_fill.", filters.hole_fill);
+
+    f << "\n# tag detection\n"
+      << "expected_tags: " << expected_tags << "\n"
+      << "CAND_MAX_SIDE_RATIO: "   << CAND_MAX_SIDE_RATIO   << "\nCAND_MIN_SIDE_PX: " << CAND_MIN_SIDE_PX
+      << "\nCAND_MAX_SIDE_PX: "    << CAND_MAX_SIDE_PX      << "\nCAND_MEDIAN_SIDE_TOL: " << CAND_MEDIAN_SIDE_TOL
+      << "\nCAND_CELL_PX: "        << CAND_CELL_PX          << "\nCAND_MIN_CONTRAST: " << CAND_MIN_CONTRAST
+      << "\nCAND_MAX_BORDER_RATIO: " << CAND_MAX_BORDER_RATIO << "\nCAND_MIN_SIDES_PASS: " << CAND_MIN_SIDES_PASS
+      << "\nCAND_MIN_DATA_CELLS: " << CAND_MIN_DATA_CELLS   << "\nCAND_DEDUP_FRAC: " << CAND_DEDUP_FRAC
+      << "\nFLATTEN_SIGMA_PX: "    << FLATTEN_SIGMA_PX      << "\nFLATTEN_USE_CLAHE: " << FLATTEN_USE_CLAHE
+      << "\nFLATTEN_CLAHE_CLIP: "  << FLATTEN_CLAHE_CLIP    << "\n";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Test mode helpers ─────────────────────────────────────────────────────────
 
 // Derive video output path from the -o argument (if given), else use default.
@@ -617,6 +779,9 @@ int main(int argc, char* argv[])
     bool        id_mode       = false;
     int         expected_tags = 4;       // -nTags: triggers the flattened second pass
     bool        debug_tags    = false;   // -debugTags: draw filtered-out candidates
+    CamConfig   cam;                     // -r, --fps, -u, -p
+    long long   best_lo       = 0;       // -b: best-frame search range (inclusive)
+    long long   best_hi       = -1;      //     -1 = up to the last frame
 
     std::unique_ptr<mountSerial> serial;
     char read_buf[30];
@@ -651,6 +816,26 @@ int main(int argc, char* argv[])
             expected_tags = std::stoi(argv[++i]);
         else if (arg == "-debugTags" || arg == "--debugTags")
             debug_tags = true;
+        else if ((arg == "-r" || arg == "--res") && i + 1 < argc) {
+            if (std::sscanf(argv[++i], "%dx%d", &cam.width, &cam.height) != 2) {
+                std::cerr << "Bad resolution '" << argv[i] << "', expected WxH (e.g. 848x480)\n"; return 1;
+            }
+        }
+        else if (arg == "--fps" && i + 1 < argc)
+            cam.fps = std::stoi(argv[++i]);
+        else if ((arg == "-u" || arg == "--units") && i + 1 < argc)
+            cam.depth_units = std::stof(argv[++i]);
+        else if ((arg == "-p" || arg == "--preset") && i + 1 < argc) {
+            cam.preset = argv[++i];
+            if (preset_value(cam.preset) < 0) {
+                std::cerr << "Unknown preset '" << cam.preset << "'\n"; print_usage(argv[0]); return 1;
+            }
+        }
+        else if ((arg == "-b" || arg == "--best-range") && i + 1 < argc) {
+            if (!parse_range(argv[++i], best_lo, best_hi)) {
+                std::cerr << "Bad best-frame range '" << argv[i] << "', expected START:END\n"; return 1;
+            }
+        }
         else if (arg == "-h" || arg == "--help") { print_usage(argv[0]); return 0; }
         else { std::cerr << "Unknown argument: " << arg << "\n"; print_usage(argv[0]); return 1; }
     }
@@ -658,6 +843,14 @@ int main(int argc, char* argv[])
     if (id_mode && test_mode) {
         std::cerr << "Error: -id and -test cannot be used together.\n"; return 1;
     }
+
+    if (frame_limit > 0 && best_lo >= frame_limit) {
+        std::cerr << "Error: best-frame range starts at frame " << best_lo
+                  << " but only " << frame_limit << " frames are captured (-n).\n"; return 1;
+    }
+
+    std::string cmdline = argv[0];
+    for (int i = 1; i < argc; ++i) cmdline += std::string(" ") + argv[i];
 
     if (angle_limit>60)
     {
@@ -738,7 +931,7 @@ int main(int argc, char* argv[])
         // } catch (const rs2::error& e) {
         //     std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
         // }
-        ctx = start_pipeline_retry((test_mode || id_mode) ? "" : output_file, test_mode || id_mode,5);
+        ctx = start_pipeline_retry((test_mode || id_mode) ? "" : output_file, test_mode || id_mode, cam, 5);
 
 
         std::string   csv_file = id_mode ? "" : csv_path(test_mode ? "" : output_file);
@@ -756,13 +949,16 @@ int main(int argc, char* argv[])
         std::string imu_file     = capture_best
             ? (output_file.empty() ? "imu_a"+std::to_string(angle*side)+".csv" : dir_of(output_file) + "/imu_a"+std::to_string(angle*side)+".csv")
             : "";
+        std::string info_file = output_file.empty() ? "scan_info.txt" : dir_of(output_file) + "/scan_info.txt";
+        const std::string best_range_str = std::to_string(best_lo) + ":"
+            + (best_hi < 0 ? std::string("end") : std::to_string(best_hi));
 
         // ── Test mode: open video writer ──────────────────────────────────────────
         cv::VideoWriter video_writer;
         std::string     vid_file;
         if (test_mode) {
             vid_file     = video_path(output_file);
-            video_writer = open_video(vid_file, 848, 480, 5.0);
+            video_writer = open_video(vid_file, cam.width, cam.height, 5.0);
             if (!video_writer.isOpened()) {
                 std::cerr << "Failed to open video writer: " << vid_file << "\n"; return 1;
             }
@@ -773,7 +969,7 @@ int main(int argc, char* argv[])
             std::cout << "ID MODE — RGB-only, detect ALL AprilTag 36h11 tags\n"
                     << "Wave each tag in front of the camera to confirm it works.\n"
                     << "New unique IDs will be printed as they are detected.\n"
-                    << "Stream  : Color 1280x720\n"
+                    << "Stream  : Color " << cam.width << "x" << cam.height << "\n"
                     << (duration_sec > 0
                             ? "Duration: " + std::to_string(duration_sec) + "s\n"
                             : "Press q or Ctrl+C to stop.\n")
@@ -781,7 +977,7 @@ int main(int argc, char* argv[])
         } else if (test_mode) {
             std::cout << "TEST MODE — RGB-only, no depth/IMU\n"
                     << "Detecting AprilTag 36h11 — ALL tags\n"
-                    << "Stream  : Color 848x480\n"
+                    << "Stream  : Color " << cam.width << "x" << cam.height << "\n"
                     << "Video   : " << vid_file  << "\n"
                     << "CSV     : " << csv_file  << "\n"
                     << (duration_sec > 0
@@ -790,11 +986,14 @@ int main(int argc, char* argv[])
                     << std::string(60, '-') << "\n";
         } else {
             std::cout << "Detecting AprilTag 36h11 — ALL tags\n"
-                    << "Streams : Depth 848x480 | Color 848x480 | Accel | Gyro\n"
+                    << "Streams : Depth + Color " << cam.width << "x" << cam.height << "@" << cam.fps
+                    << " | Accel | Gyro\n"
+                    << "Depth   : preset " << cam.preset << ", units " << cam.depth_units << " m\n"
                     << "Record  : " << (output_file.empty() ? "off" : output_file) << "\n"
                     << "CSV     : " << csv_file << "\n"
-                    << "PLY     : " << ply_file << "  (best frame — least holes)\n"
+                    << "PLY     : " << ply_file << "  (best frame — least holes, frames " << best_range_str << ")\n"
                     << "IMU     : " << imu_file << "\n"
+                    << "Config  : " << info_file << "\n"
                     << (duration_sec > 0
                             ? "Duration: " + std::to_string(duration_sec) + "s\n"
                             : "")
@@ -824,6 +1023,8 @@ int main(int argc, char* argv[])
         long long        best_frame_idx    = -1;
         double           best_ts_ms        = 0.0;
         int              best_valid_pixels = -1;
+        int              best_total_pixels = 0;
+        long long        frames_in_range   = 0;
 
 
         while (g_running) {
@@ -964,9 +1165,13 @@ int main(int argc, char* argv[])
                         else {holes++;}
                     } //get depth stats for which is the best frame
 
-                // Best-frame selection: most valid depth pixels == fewest holes
-                if (valid > best_valid_pixels) {
+                // Best-frame selection: most valid depth pixels == fewest holes,
+                // only among frames inside the -b range
+                const bool in_range = frame_count >= best_lo && (best_hi < 0 || frame_count <= best_hi);
+                if (in_range) ++frames_in_range;
+                if (in_range && valid > best_valid_pixels) {
                     best_valid_pixels = valid;
+                    best_total_pixels = w * h;
                     best_depth        = filtered;
                     best_color        = color_frame;
                     best_accel        = last_accel;
@@ -1000,6 +1205,38 @@ int main(int argc, char* argv[])
         }
         // ─────────────────────────────────────────────────────────────────────────
 
+        // ── Full scan configuration (read from the device, so before stop) ──────
+        {
+            const double scan_s = std::chrono::duration<double>(
+                std::chrono::steady_clock::now() - t_start).count();
+            std::ostringstream r;
+            r << "mode: " << (id_mode ? "id" : test_mode ? "test" : "normal") << "\n"
+              << "session: "        << run_ts << "\n"
+              << "rotation_deg: "   << rotation_index << "\n"
+              << "tilt_enabled: "   << Enable_Tilt << "\n"
+              << "tilt_angle_deg: " << angle * side << "\n"
+              << "tilt_limit_deg: " << angle_limit << "\ntilt_step_deg: " << step << "\n"
+              << "duration_limit_s: " << duration_sec << "\nframe_limit: " << frame_limit << "\n"
+              << "frames_captured: " << frame_count << "\n"
+              << "scan_duration_s: " << std::fixed << std::setprecision(3) << scan_s << "\n"
+              << std::defaultfloat
+              << "record: "         << ((test_mode || id_mode) ? "" : output_file) << "\n"
+              << "csv: "            << csv_file << "\n";
+            if (capture_best) {
+                r << "best_range: "        << best_range_str << "\n"
+                  << "best_frames_in_range: " << frames_in_range << "\n";
+                if (best_valid_pixels >= 0)
+                    r << "best_frame: "        << best_frame_idx << "\n"
+                      << "best_timestamp_ms: " << best_ts_ms << "\n"
+                      << "best_valid_pixels: " << best_valid_pixels << " / " << best_total_pixels << "\n"
+                      << "ply: " << ply_file << "\nimu: " << imu_file << "\n";
+                else
+                    r << "best_frame: none (no depth frame inside the range)\n";
+            }
+            if (test_mode) r << "video: " << vid_file << "\n";
+            write_scan_info(info_file, cmdline, cam, ctx, filters, expected_tags, r.str());
+        }
+
         ctx.pipe.stop();
         if (test_mode) video_writer.release();
 
@@ -1027,8 +1264,10 @@ int main(int argc, char* argv[])
                             << "  (frame " << best_frame_idx << ")\n"
                             << "IMU     : " << imu_file << "\n";
                 } else {
-                    std::cout << "PLY     : (skipped — no depth frame captured)\n";
+                    std::cout << "PLY     : (skipped — no depth frame captured in frames "
+                              << best_range_str << ")\n";
                 }
+                std::cout << "Config  : " << info_file << "\n";
             }
         }
         frame_count=0;
