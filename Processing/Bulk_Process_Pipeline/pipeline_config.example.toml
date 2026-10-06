@@ -1,0 +1,41 @@
+# Bulk crop + fuse settings. Copy, edit, and pass with --config:
+#   python3 bulk_process.py <source> <output> --config my_pipeline.toml
+# Relative paths are resolved against this file's folder.
+# Command-line flags override what is set here.
+
+[crop]
+# Automatic AprilTag crop from ../Crop/crop_pointclouds.py.
+margin = 10.0          # px the crop is pulled in from the tags' inner corners (negative grows it)
+frame_window = 15     # detections up to this many frames either side fill in missing tags
+# tag_order = [6, 5, 2, 4]   # clockwise corner tag IDs; default: learned per session
+on_fail = "skip"      # auto crop not possible: "skip" (leave scan out), "keep" (fuse it uncropped),
+                      # or "manual" (open the crop tool's manual crop window)
+review = false        # true: show the crop preview window for every scan
+
+[fuse]
+# binary = "../Fuse/build/fuse_scans"
+gui = false           # true: open fuse_scans' viewer per session instead of --no-gui
+
+# Every key below becomes a fuse_scans flag: key = value -> --key value,
+# key = true -> --key, key = false -> left out, a list repeats the flag.
+# Anything not set uses fuse_scans' own default (shown here). See
+# ../Fuse/README.md or `fuse_scans --help` for what each one does.
+[fuse.params]
+# rig-config = "../Fuse/src/rig_config.example.txt"
+# tag-align = true          # also try a coarse pose from the AprilTag sidecars the crop step writes
+# tag-min-shared = 1
+# tag-max-rmse = 0.010
+# scan-voxel = 0.0005        # spacing each scan is thinned to on load (ceiling on detail)
+# fusion-mode = "auto"      # auto | heightfield | volumetric
+# fusion-cell = 0.0005       # height-field cell size (sets the output point count)
+# fusion-voxel = 0.002      # volumetric voxel size
+# fusion-min-scans = 1      # 2 = strong noise filter, trims each scan's edges
+# fusion-trim = 0.25        # 0 = mean, 0.5 = median
+# mls-radius = 0.010
+# no-mls = true
+# no-fusion-weights = true
+# no-fusion-sor = true
+# tilt-pivot-range = 0.12
+# no-rotation-direction = true
+# no-tilt-calibration = true
+# no-imu-tilt = true
