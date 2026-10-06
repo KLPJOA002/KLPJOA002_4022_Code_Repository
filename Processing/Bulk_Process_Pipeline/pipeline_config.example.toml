@@ -22,12 +22,12 @@ gui = false           # true: open fuse_scans' viewer per session instead of --n
 # ../Fuse/README.md or `fuse_scans --help` for what each one does.
 [fuse.params]
 # rig-config = "../Fuse/src/rig_config.example.txt"
-# tag-align = true          # also try a coarse pose from the AprilTag sidecars the crop step writes
+tag-align = true          # also try a coarse pose from the AprilTag sidecars the crop step writes
 # tag-min-shared = 1
 # tag-max-rmse = 0.010
-# scan-voxel = 0.0005        # spacing each scan is thinned to on load (ceiling on detail)
+scan-voxel = 0.0005        # spacing each scan is thinned to on load (ceiling on detail)
 # fusion-mode = "auto"      # auto | heightfield | volumetric
-# fusion-cell = 0.0005       # height-field cell size (sets the output point count)
+fusion-cell = 0.0005       # height-field cell size (sets the output point count)
 # fusion-voxel = 0.002      # volumetric voxel size
 # fusion-min-scans = 1      # 2 = strong noise filter, trims each scan's edges
 # fusion-trim = 0.25        # 0 = mean, 0.5 = median
