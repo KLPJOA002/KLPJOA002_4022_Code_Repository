@@ -104,6 +104,14 @@ void printUsage(const char* prog)
         "  --no-rotation-direction  don't infer which way the rig turned at each\n"
         "                           rotation step; trust the recorded angles instead\n"
         "  --no-roi             skip the per-scan crop box prompt in the viewer\n"
+        "  --tag-align          also try a coarse pose from the AprilTags in each scan's\n"
+        "                       *_detections.csv (needs scan_info.txt beside the PLY);\n"
+        "                       scored against the usual seed / feature match, and the\n"
+        "                       better fit is kept\n"
+        "  --tag-min-shared <n> tags a scan must share with those already placed before\n"
+        "                       a tag pose is tried (default 1)\n"
+        "  --tag-max-rmse <m>   reject a tag fit whose corners disagree by more than\n"
+        "                       this after fitting (default 0.010)\n"
         "\n"
         "Density:\n"
         "  --scan-voxel <m>     spacing each scan is thinned to when loaded (default\n"
@@ -179,6 +187,9 @@ int main(int argc, char** argv)
     bool infer_rotation_direction = true;
     bool calibrate_tilt = true;
     bool use_imu_tilt = true;
+    bool tag_align = false;
+    std::optional<int> tag_min_shared;
+    std::optional<double> tag_max_rmse;
     ReconcileParams reconcile_params;
     std::optional<Eigen::Vector3f> tilt_pivot_override;
     std::optional<float> tilt_pivot_range;
@@ -275,6 +286,18 @@ int main(int argc, char** argv)
         else if (arg == "--no-imu-tilt")
         {
             use_imu_tilt = false;
+        }
+        else if (arg == "--tag-align")
+        {
+            tag_align = true;
+        }
+        else if (arg == "--tag-min-shared" && i + 1 < argc)
+        {
+            tag_min_shared = std::stoi(argv[++i]);
+        }
+        else if (arg == "--tag-max-rmse" && i + 1 < argc)
+        {
+            tag_max_rmse = std::stod(argv[++i]);
         }
         else if (arg == "--scan-voxel" && i + 1 < argc)
         {
@@ -413,6 +436,9 @@ int main(int argc, char** argv)
     params.calibrate_tilt_geometry = calibrate_tilt && !tilt_pivot_override.has_value();
     if (tilt_pivot_range) params.tilt_pivot_search_range = *tilt_pivot_range;
     if (scan_voxel) params.voxel_leaf_size = *scan_voxel;
+    params.use_tag_alignment = tag_align;
+    if (tag_min_shared) params.tag_min_shared = *tag_min_shared;
+    if (tag_max_rmse) params.tag_max_fit_rmse = *tag_max_rmse;
 
     // Warn rather than silently disappoint: asking for fused cells finer than
     // the spacing the scans were thinned to cannot add detail, it just splits

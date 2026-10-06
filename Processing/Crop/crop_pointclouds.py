@@ -39,6 +39,14 @@ Automatic crop (tried first for every file):
   If the automatic crop is not possible (no detections, too few tags, no
   intrinsics) the manual crop is started directly.
 
+Tag sidecar (for fuse_scans --tag-align):
+  The crop cuts the AprilTags out of the cloud, so every output folder also
+  gets <Session_rx_ay>_tags.csv: each decoded tag's four 3D corners, measured
+  on the ORIGINAL cloud and written in the cloud's own frame (which the crop
+  keeps). The scan's *_detections.csv and scan_info.txt are copied alongside.
+  --tags-only writes just these (no cropping, no windows), to backfill folders
+  cropped before this existed.
+
 Manual crop (two windows per file):
 
   Step 1 - size the box with the mouse:
@@ -129,6 +137,14 @@ def find_imu_file(ply_path: Path):
             return imu_path
     candidates = sorted(ply_path.parent.glob("imu*.csv"))
     return candidates[0] if candidates else None
+
+
+def copy_scan_metadata(ply_path: Path, out_dir: Path):
+    """Copy the scan's detections and scan_info.txt next to the cropped cloud."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for src in [find_detections_file(ply_path), ply_path.parent / "scan_info.txt"]:
+        if src is not None and src.is_file():
+            shutil.copy2(src, out_dir / src.name)
 
 
 def copy_imu_file(ply_path: Path, out_dir: Path):
@@ -266,11 +282,16 @@ def find_color_intrinsics(ply_path: Path, input_dir: Path):
 
 
 def _distort(intr: Intrinsics, x, y):
+    # librealsense's rs2_project_point_to_pixel: the tangential terms act on
+    # the radially *scaled* coordinates (r2 stays the unscaled radius). This
+    # reprojects an exported cloud onto the integer pixel grid to ~1e-5 px;
+    # applying them to the unscaled coordinates leaves ~0.01 px.
     k1, k2, p1, p2, k3 = intr.coeffs
     r2 = x * x + y * y
     f = 1 + k1 * r2 + k2 * r2 * r2 + k3 * r2 * r2 * r2
-    dx = x * f + 2 * p1 * x * y + p2 * (r2 + 2 * x * x)
-    dy = y * f + 2 * p2 * x * y + p1 * (r2 + 2 * y * y)
+    x, y = x * f, y * f
+    dx = x + 2 * p1 * x * y + p2 * (r2 + 2 * x * x)
+    dy = y + 2 * p2 * x * y + p1 * (r2 + 2 * y * y)
     return dx, dy
 
 
@@ -733,6 +754,107 @@ def compute_auto_crop(pcd, ply_path: Path, input_dir: Path, layout: TagLayout, a
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Tag sidecar: 3D tag corners for fuse_scans --tag-align
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Mirrors locateTags() in Fuse/src/tag_alignment.cpp - keep the two in step.
+
+# Only the inner part of each tag is used for its plane: border pixels mix tag
+# and background depth.
+TAG_INNER_SCALE = 0.7
+TAG_MIN_PLANE_POINTS = 30
+TAG_PLANE_INLIER_M = 0.003
+
+
+def median_tag_corners(by_frame):
+    """{id: (median corner pixels (4, 2), decoded frame count)}. The camera is
+    still for the whole recording, so the median only removes detector jitter."""
+    samples = defaultdict(list)
+    for tags in by_frame.values():
+        for tag in tags:
+            if tag.decoded and tag.id >= 0:
+                samples[tag.id].append(tag.corners)
+    return {i: (np.median(np.stack(c), axis=0), len(c)) for i, c in samples.items()}
+
+
+def _lsq_plane(points):
+    """(unit normal, centroid, rms distance) of the least-squares plane."""
+    centroid = points.mean(axis=0)
+    _, _, vt = np.linalg.svd(points - centroid, full_matrices=False)
+    normal = vt[2]
+    return normal, centroid, float(np.sqrt(np.mean(((points - centroid) @ normal) ** 2)))
+
+
+def locate_tags_3d(points, det_path: Path, intr: Intrinsics):
+    """Each decoded tag's corners in the .ply's own frame. Each corner is
+    where its pixel's ray meets a plane fitted to the depth points on the
+    tag. Returns (located, skipped): located is a list of
+    (id, corners (4, 3), frames, plane_rms_m, edge_m); skipped of (id, reason)."""
+    cam = _ply_to_camera(points)
+    uv = project_to_pixels(intr, points)
+    located, skipped = [], []
+
+    for tag_id, (corners_px, frames) in sorted(median_tag_corners(load_detections(det_path)).items()):
+        centre = corners_px.mean(axis=0)
+        on_tag = points_in_quad(uv, centre + TAG_INNER_SCALE * (corners_px - centre))
+        if on_tag.sum() < TAG_MIN_PLANE_POINTS:
+            skipped.append((tag_id, f"only {int(on_tag.sum())} depth points on the tag"))
+            continue
+
+        pts = cam[on_tag]
+        normal, centroid, rms = _lsq_plane(pts)
+        keep = np.abs((pts - centroid) @ normal) <= max(TAG_PLANE_INLIER_M, 2.5 * rms)
+        if keep.sum() < TAG_MIN_PLANE_POINTS:
+            skipped.append((tag_id, "depth on the tag is not planar"))
+            continue
+        normal, centroid, rms = _lsq_plane(pts[keep])
+
+        rays = np.column_stack([pixel_rays(intr, corners_px), np.ones(4)])
+        denom = rays @ normal
+        if np.any(np.abs(denom) < 1e-4):
+            skipped.append((tag_id, "tag plane is edge-on to the camera"))
+            continue
+        corners = _ply_to_camera(rays * ((centroid @ normal) / denom)[:, None])  # back to .ply frame
+        edge = float(np.mean(np.linalg.norm(np.roll(corners, -1, axis=0) - corners, axis=1)))
+        located.append((tag_id, corners, frames, rms, edge))
+    return located, skipped
+
+
+def write_tag_sidecar(ply_path: Path, pcd, input_dir: Path, out_dir: Path):
+    """Write <tilt folder>_tags.csv for an ORIGINAL (uncropped) cloud."""
+    det_path = find_detections_file(ply_path)
+    if det_path is None:
+        print("    Tag sidecar: no *_detections.csv next to the .ply, skipping.")
+        return
+    intr, bag = find_color_intrinsics(ply_path, input_dir)
+    if intr is None:
+        print("    Tag sidecar: no .db3 recording with colour intrinsics, skipping.")
+        return
+    points = np.asarray(pcd.points)
+    intr, residual = match_intrinsics_to_cloud(intr, points)
+    if residual > MAX_GRID_RESIDUAL_PX:
+        print(f"    Tag sidecar: intrinsics from {bag.name} don't match this cloud "
+              f"(pixel-grid residual {residual:.2f}px), skipping.")
+        return
+
+    located, skipped = locate_tags_3d(points, det_path, intr)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{ply_path.parent.name}_tags.csv"
+    with open(out_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["marker_id", "corner", "x", "y", "z", "frames", "plane_rms_m", "edge_m"])
+        for tag_id, corners, frames, rms, edge in located:
+            for k, (x, y, z) in enumerate(corners):
+                writer.writerow([tag_id, k, f"{x:.6f}", f"{y:.6f}", f"{z:.6f}",
+                                 frames, f"{rms:.6f}", f"{edge:.6f}"])
+
+    summary = ", ".join(f"id{t[0]} (edge {t[4] * 1000:.1f}mm)" for t in located) or "none"
+    print(f"    Tag sidecar -> {out_path.name}: {summary}")
+    for tag_id, reason in skipped:
+        print(f"      id{tag_id} skipped: {reason}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  Interactive windows
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -949,10 +1071,8 @@ def manual_crop(pcd, path: Path, fallback_min=None, fallback_max=None):
     return pcd
 
 
-def crop_point_cloud(path: Path, input_dir: Path, layout: TagLayout, args):
+def crop_point_cloud(pcd, path: Path, input_dir: Path, layout: TagLayout, args):
     """Try the tag-based automatic crop, fall back to the manual crop."""
-    pcd = o3d.io.read_point_cloud(str(path))
-
     auto = None
     if not args.no_auto:
         try:
@@ -995,6 +1115,13 @@ def main():
         "--skip-existing",
         action="store_true",
         help="Skip files whose cropped output already exists",
+    )
+    parser.add_argument(
+        "--tags-only",
+        action="store_true",
+        help="Don't crop: only write each scan's <scan>_tags.csv sidecar (and copy its "
+             "detections / scan_info.txt) into the mirrored output folder. Use it to "
+             "backfill folders cropped before the sidecar existed",
     )
     parser.add_argument(
         "--no-auto",
@@ -1044,6 +1171,16 @@ def main():
     print(f"Found {len(ply_files)} point cloud(s) under {input_dir}")
     print(__doc__)
 
+    if args.tags_only:
+        for i, ply_path in enumerate(ply_files, start=1):
+            rel_path = ply_path.relative_to(input_dir)
+            out_dir = (output_dir / rel_path).parent
+            print(f"\n[{i}/{len(ply_files)}] Tags: {rel_path}")
+            write_tag_sidecar(ply_path, o3d.io.read_point_cloud(str(ply_path)), input_dir, out_dir)
+            copy_scan_metadata(ply_path, out_dir)
+        print("\nDone.")
+        return
+
     layout = TagLayout()
     if not args.no_auto:
         if args.tag_order and len(args.tag_order) != 4:
@@ -1065,11 +1202,16 @@ def main():
         if args.skip_existing and out_path.exists():
             print(f"[{i}/{len(ply_files)}] Skipping (already exists): {out_path}")
             copy_imu_file(ply_path, out_path.parent)
+            copy_scan_metadata(ply_path, out_path.parent)
+            if not (out_path.parent / f"{ply_path.parent.name}_tags.csv").exists():
+                write_tag_sidecar(ply_path, o3d.io.read_point_cloud(str(ply_path)),
+                                  input_dir, out_path.parent)
             continue
 
         print(f"\n[{i}/{len(ply_files)}] Cropping: {rel_path}")
+        pcd = o3d.io.read_point_cloud(str(ply_path))
         try:
-            cropped = crop_point_cloud(ply_path, input_dir, layout, args)
+            cropped = crop_point_cloud(pcd, ply_path, input_dir, layout, args)
         except QuitAll:
             print("\nQuit requested. Stopping without processing remaining files.")
             sys.exit(0)
@@ -1078,6 +1220,9 @@ def main():
         write_ply_like_original(out_path, cropped)
         print(f"    Saved -> {out_path}  ({len(cropped.points)} points)")
         copy_imu_file(ply_path, out_path.parent)
+        # From the original cloud: the crop has just cut the tags away.
+        write_tag_sidecar(ply_path, pcd, input_dir, out_path.parent)
+        copy_scan_metadata(ply_path, out_path.parent)
 
     print("\nDone.")
 

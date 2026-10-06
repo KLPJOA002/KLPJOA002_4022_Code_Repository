@@ -58,37 +58,43 @@ struct DepthFilters {
 
     DepthFilters()
     {
-        threshold.set_option(RS2_OPTION_MIN_DISTANCE,0.1f);
-        threshold.set_option(RS2_OPTION_MAX_DISTANCE,1.0f);
+        // threshold.set_option(RS2_OPTION_MIN_DISTANCE,0.1f);
+        // threshold.set_option(RS2_OPTION_MAX_DISTANCE,1.0f);
 
-        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f); // Spatial filter over small history
-        spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f); //threshold for disable low
-        spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.f); // filter magnitude of 1
+        // spatial.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.8f); // Spatial filter over small history
+        // spatial.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 5.f); //threshold for disable low
+        // spatial.set_option(RS2_OPTION_FILTER_MAGNITUDE, 1.f); // filter magnitude of 1
 
-        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.06f); //Set temporal filter to apply long filter windows
-        temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 100.f); //set the delta threshold high to avoid disabbling on smal temporal changes
-        temporal.set_option(RS2_OPTION_HOLES_FILL, 1.f); //select pixel only if valid in the past 8 frames
+        // temporal.set_option(RS2_OPTION_FILTER_SMOOTH_ALPHA, 0.06f); //Set temporal filter to apply long filter windows
+        // temporal.set_option(RS2_OPTION_FILTER_SMOOTH_DELTA, 100.f); //set the delta threshold high to avoid disabbling on smal temporal changes
+        // temporal.set_option(RS2_OPTION_HOLES_FILL, 1.f); //select pixel only if valid in the past 8 frames
 
-        hole_fill.set_option(RS2_OPTION_HOLES_FILL, 1.f); //set hole filling option to :something
+        // hole_fill.set_option(RS2_OPTION_HOLES_FILL, 1.f); //set hole filling option to :something
     }
 
     rs2::depth_frame process(rs2::depth_frame depth)
     {
         // depth = decimation.process(depth);
-        depth = threshold.process(depth);
-        depth = to_disparity.process(depth);
-        depth = spatial.process(depth);
-        depth = temporal.process(depth);
-        depth = to_depth.process(depth);
-        depth = hole_fill.process(depth);
+        // depth = threshold.process(depth);
+        // depth = to_disparity.process(depth);
+        // depth = spatial.process(depth);
+        // depth = temporal.process(depth);
+        // depth = to_depth.process(depth);
+        // depth = hole_fill.process(depth);
         return depth.as<rs2::depth_frame>();
     }
 };
 
 // ── Pipeline helpers ──────────────────────────────────────────────────────────
+// Created ONCE for the whole run and reused via start()/stop(). A default
+// rs2::pipeline makes its own rs2::context, so building a new pipeline per scan
+// piles up contexts on the same device (incl. the HID IMU) and segfaults after a
+// few scans. rs_ctx must stay declared before pipe (member init order).
 struct PipelineCtx {
-    rs2::pipeline         pipe;
-    rs2::pipeline_profile profile;
+    rs2::context          rs_ctx;
+    rs2::pipeline         pipe{rs_ctx};
+    rs2::pipeline_profile profile;   // current scan; reset after stop() to close the recording
+    rs2::device           device;    // the physical camera (the profile's device is the recorder)
 };
 
 // Camera settings chosen on the command line (-r, --fps, -u, -p)
@@ -130,21 +136,19 @@ static void apply_depth_settings(rs2::depth_sensor& ds, const CamConfig& cam)
     try_set(ds, RS2_OPTION_THERMAL_COMPENSATION, 0.0f, "thermal compensation");
 }
 
-static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode, const CamConfig& cam)
+static void start_pipeline(PipelineCtx& ctx, const std::string& output_file, bool test_mode, const CamConfig& cam)
 {
-    PipelineCtx ctx;
     rs2::config cfg;
 
     // Apply the depth settings before streaming starts so the recording's header
     // carries the right depth scale. Options persist on the device across start().
-    rs2::context rs_ctx;
-    auto devices = rs_ctx.query_devices();
-    if (devices.size() > 0) {
-        rs2::device dev = devices[0];
-        auto ds = dev.first<rs2::depth_sensor>();
-        apply_depth_settings(ds, cam);
-        cfg.enable_device(dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
-    }
+    // Uses the shared context — never create another one here.
+    auto devices = ctx.rs_ctx.query_devices();
+    if (devices.size() == 0) throw std::runtime_error("No RealSense device connected");
+    ctx.device = devices[0];
+    auto pre_ds = ctx.device.first<rs2::depth_sensor>();
+    apply_depth_settings(pre_ds, cam);
+    cfg.enable_device(ctx.device.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
 
     if (test_mode) {
         cfg.enable_stream(RS2_STREAM_COLOR, 0, cam.width, cam.height, RS2_FORMAT_RGB8, cam.fps);
@@ -158,6 +162,16 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
     }
     ctx.profile = ctx.pipe.start(cfg);//start the pipeline with the cfg configuration
 
+    // librealsense 2.57 recorder bug: each recorded sensor hooks its own notification
+    // lambda onto the live sensor and only swaps it back out on teardown if a user
+    // callback was registered. With none, the lambda outlives its (destroyed) recorder
+    // and the next camera notification in a later scan segfaults. Registering one
+    // here makes every recorder restore this callback instead.
+    for (auto& s : ctx.profile.get_device().query_sensors())
+        s.set_notifications_callback([](rs2::notification n) {
+            std::cerr << "\n[camera] " << n.get_description() << "\n";
+        });
+
     // Check the settings survived the stream start; re-apply (preset first) if not
     auto ds = ctx.profile.get_device().first<rs2::depth_sensor>();
     if (std::fabs(ds.get_depth_scale() - cam.depth_units) > 1e-9f) {
@@ -165,17 +179,17 @@ static PipelineCtx start_pipeline(const std::string& output_file, bool test_mode
                   << " after start, re-applying " << cam.depth_units << "\n";
         apply_depth_settings(ds, cam);
     }
-    return ctx;
 }
 
 
-static PipelineCtx start_pipeline_retry(const std::string& output_file, bool test_mode,
-                                         const CamConfig& cam, int max_attempts = 5)
+static void start_pipeline_retry(PipelineCtx& ctx, const std::string& output_file, bool test_mode,
+                                 const CamConfig& cam, int max_attempts = 5)
 {
     for (int attempt = 1; attempt <= max_attempts; ++attempt) {
         try {
-            return start_pipeline(output_file, test_mode, cam);
-        } catch (const rs2::error& e) {
+            start_pipeline(ctx, output_file, test_mode, cam);
+            return;
+        } catch (const std::exception& e) {
             std::cerr << "start_pipeline attempt " << attempt << " failed: "
                       << e.what() << " — retrying...\n";
             std::this_thread::sleep_for(std::chrono::milliseconds(500 * attempt));
@@ -696,7 +710,7 @@ static void write_scan_info(const std::string& path, const std::string& cmdline,
       << "preset: "      << cam.preset << "\n"
       << "depth_units_m: " << cam.depth_units << "\n";
 
-    rs2::device dev = ctx.profile.get_device();
+    rs2::device dev = ctx.device;
     f << "\n# device\n";
     for (int i = 0; i < RS2_CAMERA_INFO_COUNT; ++i) {
         const auto ci = rs2_camera_info(i);
@@ -881,12 +895,7 @@ int main(int argc, char* argv[])
 
     std::signal(SIGINT,  signal_handler);
     std::signal(SIGTERM, signal_handler);
-    PipelineCtx ctx;
-
-    // std::signal(SIGINT,  signal_handler);
-    // std::signal(SIGTERM, signal_handler);
-    // rs2::pipeline         pipe;     // created ONCE, reused every iteration via stop()/start()
-    // rs2::pipeline_profile profile;
+    PipelineCtx ctx;   // one context + pipeline for every scan of the run
 
 
     int  rotation_index = 0;
@@ -931,7 +940,7 @@ int main(int argc, char* argv[])
         // } catch (const rs2::error& e) {
         //     std::cerr << "RealSense error: " << e.what() << "\n"; return 1;
         // }
-        ctx = start_pipeline_retry((test_mode || id_mode) ? "" : output_file, test_mode || id_mode, cam, 5);
+        start_pipeline_retry(ctx, (test_mode || id_mode) ? "" : output_file, test_mode || id_mode, cam, 5);
 
 
         std::string   csv_file = id_mode ? "" : csv_path(test_mode ? "" : output_file);
@@ -988,7 +997,7 @@ int main(int argc, char* argv[])
             std::cout << "Detecting AprilTag 36h11 — ALL tags\n"
                     << "Streams : Depth + Color " << cam.width << "x" << cam.height << "@" << cam.fps
                     << " | Accel | Gyro\n"
-                    << "Depth   : preset " << cam.preset << ", units " << cam.depth_units << " m\n"
+                    << "Depth   : preset " << cam.preset << ", units " << std::defaultfloat << cam.depth_units << " m\n"
                     << "Record  : " << (output_file.empty() ? "off" : output_file) << "\n"
                     << "CSV     : " << csv_file << "\n"
                     << "PLY     : " << ply_file << "  (best frame — least holes, frames " << best_range_str << ")\n"
@@ -1203,6 +1212,9 @@ int main(int argc, char* argv[])
             points.export_to_ply(ply_file, best_color);
             write_imu_csv(imu_file, best_frame_idx, best_ts_ms, best_accel, best_gyro);
         }
+        // Drop the held frames so nothing references the stream once it stops
+        best_depth = rs2::depth_frame{rs2::frame{}};
+        best_color = rs2::video_frame{rs2::frame{}};
         // ─────────────────────────────────────────────────────────────────────────
 
         // ── Full scan configuration (read from the device, so before stop) ──────
@@ -1219,7 +1231,7 @@ int main(int argc, char* argv[])
               << "duration_limit_s: " << duration_sec << "\nframe_limit: " << frame_limit << "\n"
               << "frames_captured: " << frame_count << "\n"
               << "scan_duration_s: " << std::fixed << std::setprecision(3) << scan_s << "\n"
-              << std::defaultfloat
+              << std::defaultfloat << std::setprecision(6)
               << "record: "         << ((test_mode || id_mode) ? "" : output_file) << "\n"
               << "csv: "            << csv_file << "\n";
             if (capture_best) {
@@ -1238,6 +1250,7 @@ int main(int argc, char* argv[])
         }
 
         ctx.pipe.stop();
+        ctx.profile = rs2::pipeline_profile{};  // destroys the recorder → .db3 closed before the next scan
         if (test_mode) video_writer.release();
 
         //std::this_thread::sleep_for(std::chrono::milliseconds(200)); // let the device release before restart

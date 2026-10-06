@@ -6,6 +6,7 @@
 #include <Eigen/Dense>
 
 #include "fusion_pipeline.h"
+#include "tag_alignment.h"
 
 // Where a scan currently sits in the pipeline. Every scan carries its own
 // status rather than the pipeline tracking "which index am I on", so that
@@ -96,6 +97,18 @@ struct ScanState
     // measured against the accumulated map the scan was aligned to.
     AlignmentQuality coarse_quality;
     AlignmentQuality fine_quality;
+
+    // Which hypothesis coarse_transform came from: "seed", "fpfh" or "tags".
+    std::string coarse_source;
+
+    // AprilTag corners located in the raw (uncropped) cloud at load time, in
+    // the scan's own frame. Empty unless tag alignment is on.
+    TagSet tags;
+
+    // This scan's pose in the common frame from the tags alone, chained
+    // through shared tags back to the reference (see solveTagPoses).
+    // tag_fit.valid is false when no chain reaches it.
+    TagFit tag_fit;
 
     // What ICP itself reported, for cross-checking against fine_quality.
     RegistrationResult icp_result;

@@ -42,6 +42,7 @@ add_executable(fuse_scans
     src/rig_geometry.cpp
     src/legend_panel.cpp
     src/scan_discovery.cpp
+    src/tag_alignment.cpp
     src/visualizer.cpp
 )
 target_link_libraries(fuse_scans ${PCL_LIBRARIES} Threads::Threads)

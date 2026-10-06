@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <cmath>
+#include <map>
 #include <sstream>
 #include <unordered_map>
 
@@ -238,12 +239,76 @@ void FusionSession::applyGuessToScan(size_t scan_index, double cumulative_rotati
 }
 
 // -------------------------------------------------------------------------
+void FusionSession::resolveRotationFromTags()
+{
+    // The seeds sit at the folder angles here. That is fine: the tag fit
+    // solves the turn about vertical freely, so it lands on the true angle
+    // whatever the folder said.
+    solveTagPoses();
+
+    // The axis the rig's rotation turns about, in the convention
+    // rotationAboutPoint uses, so a measured angle can replace a seeded one.
+    const Eigen::Vector3f axis =
+        Eigen::AngleAxisf(Eigen::Matrix3f(rotationAboutAxis(rig_.rotation_axis, 90.0f)
+                                               .topLeftCorner<3, 3>())).axis();
+
+    for (size_t k = 1; k < rotation_groups_.size(); ++k)
+    {
+        auto& group = rotation_groups_[k];
+
+        // Each scan's correction to its seeded angle: the seed is
+        // R_rotation(angle) * R_tilt, so tag * seed^-1 is the turn still missing.
+        std::vector<double> corrections;
+        for (size_t index : group.scans)
+        {
+            const auto& scan = scans_[index];
+            if (!scan.tag_fit.valid || index == reference_index_) continue;
+            const Eigen::Matrix3f delta = scan.tag_fit.transform.topLeftCorner<3, 3>() *
+                scan.input.initial_guess.topLeftCorner<3, 3>().transpose();
+            const Eigen::AngleAxisf aa(delta);
+            const double sign = aa.axis().dot(axis) >= 0.0f ? 1.0 : -1.0;
+            corrections.push_back(sign * aa.angle() * 180.0 / M_PI);
+        }
+        if (corrections.empty())
+        {
+            std::cout << "[rotation] " << group.name
+                      << ": no scan placed by tags - left to the surface-based search\n";
+            continue;
+        }
+
+        std::vector<double> sorted = corrections;
+        std::nth_element(sorted.begin(), sorted.begin() + sorted.size() / 2, sorted.end());
+        const double correction = sorted[sorted.size() / 2];
+
+        double spread = 0.0;
+        for (double c : corrections) spread = std::max(spread, std::abs(c - correction));
+
+        // Wrapped to (-180, 180]: a turn back past the start reads as -90,
+        // not as the folder's 90 plus 180.
+        const double folder_deg = group.cumulative_deg;
+        group.cumulative_deg = std::remainder(folder_deg + correction, 360.0);
+        group.from_tags = true;
+        group.resolved = true;
+        group.ambiguous = false;
+        group.tag_spread_deg = spread;
+
+        std::cout << "[rotation] " << group.name << " from tags: " << std::fixed
+                  << std::setprecision(1) << group.cumulative_deg << " deg (folder says "
+                  << folder_deg << "; " << corrections.size()
+                  << " scan(s), spread " << spread << " deg)\n";
+    }
+
+    applyRotationAngles(1);
+}
+
+// -------------------------------------------------------------------------
 void FusionSession::applyRotationAngles(size_t from_group_index)
 {
     for (size_t k = from_group_index; k < rotation_groups_.size(); ++k)
     {
         auto& group = rotation_groups_[k];
-        if (k > 0)
+        // A tag-measured angle is absolute, not a step from the previous group.
+        if (k > 0 && !group.from_tags)
         {
             const auto& prev = rotation_groups_[k - 1];
             group.cumulative_deg = (group.session_name == prev.session_name)
@@ -265,6 +330,8 @@ void FusionSession::flipRotationGroup(size_t group_index)
     }
 
     auto& group = rotation_groups_[group_index];
+    // A manual flip overrides the tags too: back to the folder step, reversed.
+    group.from_tags = false;
     group.step_sign = -group.step_sign;
     group.resolved = true;   // an explicit choice overrides whatever was inferred
     group.ambiguous = false;
@@ -306,6 +373,11 @@ void FusionSession::loadAll(const ProgressFn& progress, const RoiProvider& roi)
         {
             auto raw = loadPLY(scan.input.ply_path);
             scan.raw_point_count = raw->size();
+
+            // Before the crop: the tags sit around the edge of the scene,
+            // which is exactly what an ROI tends to cut away.
+            if (params_.use_tag_alignment)
+                locateScanTags(scan, *raw);
 
             if (roi)
             {
@@ -382,6 +454,8 @@ void FusionSession::reloadScan(size_t index, const RoiProvider& roi)
     auto& scan = scans_.at(index);
     auto raw = loadPLY(scan.input.ply_path);
     scan.raw_point_count = raw->size();
+    if (params_.use_tag_alignment && scan.tags.empty())
+        locateScanTags(scan, *raw);
 
     if (roi)
     {
@@ -414,9 +488,214 @@ VoxelMap FusionSession::buildMap(size_t exclude_index, size_t max_index) const
 }
 
 // -------------------------------------------------------------------------
+void FusionSession::solveTagPoses()
+{
+    for (auto& scan : scans_) scan.tag_fit = TagFit{};
+    if (reference_index_ >= scans_.size()) return;
+
+    // Running sums of each placed tag's corners in the common frame, so a tag
+    // seen by several scans is held at the mean of where they put it.
+    std::map<int, std::pair<TagCorners, int>> sums;
+    TagSet placed;
+    auto addTags = [&](const ScanState& scan, const Eigen::Matrix4f& pose) {
+        const Eigen::Matrix3f R = pose.topLeftCorner<3, 3>();
+        const Eigen::Vector3f t = pose.topRightCorner<3, 1>();
+        for (const auto& [id, corners] : scan.tags)
+        {
+            auto slot = sums.try_emplace(id);
+            if (slot.second) slot.first->second.first.fill(Eigen::Vector3f::Zero());
+            for (int k = 0; k < 4; ++k) slot.first->second.first[k] += R * corners[k] + t;
+            const int n = ++slot.first->second.second;
+            for (int k = 0; k < 4; ++k) placed[id][k] = slot.first->second.first[k] / static_cast<float>(n);
+        }
+    };
+
+    auto& ref = scans_[reference_index_];
+    if (ref.tags.empty())
+    {
+        std::cout << "[tags] the reference scan has no located tags - nothing to chain from\n";
+        return;
+    }
+    ref.tag_fit.valid = true;
+    ref.tag_fit.transform = ref.transform;
+    addTags(ref, ref.transform);
+
+    // Vertical in the common frame, from the reference's gravity reading. With
+    // it, a scan's tilt comes from its IMU seed and the tags only solve the
+    // turn about vertical and the translation - see fitTagsAboutAxis.
+    const bool have_up = use_imu_tilt_ && ref.input.has_gravity;
+    const Eigen::Vector3f up = have_up
+        ? Eigen::Vector3f(ref.transform.topLeftCorner<3, 3>() *
+                          tilt_calibration_.imu_to_cloud * ref.input.gravity.normalized())
+        : Eigen::Vector3f::UnitZ();
+
+    // Greedy: each round places the scan sharing the most tags with what is
+    // already placed, since more shared tags means a better-conditioned fit
+    // and less error handed on down the chain.
+    std::vector<bool> done(scans_.size(), false);
+    done[reference_index_] = true;
+    size_t placed_count = 1, candidates = 1;
+    for (size_t i = 0; i < scans_.size(); ++i)
+        if (i != reference_index_ && !scans_[i].tags.empty() &&
+            scans_[i].status != ScanStatus::Excluded) ++candidates;
+
+    while (true)
+    {
+        size_t best = scans_.size();
+        int best_shared = 0;
+        for (size_t i = 0; i < scans_.size(); ++i)
+        {
+            const auto& scan = scans_[i];
+            if (done[i] || scan.tags.empty() || scan.status == ScanStatus::Excluded) continue;
+            int shared = 0;
+            for (const auto& entry : scan.tags) shared += placed.count(entry.first) ? 1 : 0;
+            if (shared >= std::max(1, params_.tag_min_shared) && shared > best_shared)
+            {
+                best = i;
+                best_shared = shared;
+            }
+        }
+        if (best == scans_.size()) break;
+
+        auto& scan = scans_[best];
+        done[best] = true;
+        const bool constrain_tilt = have_up && scan.input.has_gravity && scan.input.has_initial_guess;
+        TagFit fit = constrain_tilt
+            ? fitTagsAboutAxis(scan.tags, placed, params_.tag_min_shared,
+                               scan.input.initial_guess.topLeftCorner<3, 3>(), up)
+            : fitTags(scan.tags, placed, params_.tag_min_shared);
+        if (!fit.valid || fit.rms > params_.tag_max_fit_rmse)
+        {
+            std::cout << "  [i] tag fit for " << scan.label() << " leaves " << mm(fit.rms)
+                      << "mm corner error - not trusted\n";
+            continue;
+        }
+        scan.tag_fit = fit;
+        addTags(scan, fit.transform);
+        ++placed_count;
+    }
+
+    std::cout << "[tags] " << placed_count << " of " << candidates
+              << " scan(s) with tags could be placed from the tags"
+              << (have_up ? " (tilt from the IMU, turn about vertical and position from the tags)"
+                          : " alone") << "\n";
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::locateScanTags(ScanState& scan, const PointCloudT& raw) const
+{
+    scan.tags.clear();
+    std::vector<TagLocateReport> reports;
+
+    // A sidecar wins: for a cropped scan it is the only source, since the crop
+    // removed the tags from the cloud.
+    std::string sidecar_path;
+    const bool from_sidecar = findTagSidecar(scan.input.ply_path, sidecar_path) &&
+                              readTagSidecar(sidecar_path, scan.tags, &reports);
+    if (!from_sidecar)
+    {
+        std::string detections_path, scan_info_path;
+        CameraIntrinsics intrinsics;
+        if (!findTagFiles(scan.input.ply_path, detections_path, scan_info_path))
+        {
+            std::cout << "  [i] " << scan.label() << ": no *_tags.csv, and no *_detections.csv /"
+                         " scan_info.txt beside the PLY - no tags\n";
+            return;
+        }
+        if (!readColorIntrinsics(scan_info_path, intrinsics))
+        {
+            std::cerr << "  [!] " << scan.label() << ": no colour intrinsics in " << scan_info_path
+                      << " - cannot place tags\n";
+            return;
+        }
+        scan.tags = locateTags(raw, detections_path, intrinsics, &reports);
+    }
+
+    std::ostringstream line;
+    line << "[tags] " << scan.label() << (from_sidecar ? " (from sidecar)" : "") << ":";
+    if (reports.empty()) line << " no decoded tags";
+    for (const auto& r : reports)
+    {
+        line << "  id" << r.id;
+        if (r.located)
+            line << " (edge " << std::fixed << std::setprecision(1) << r.edge_length * 1000.0
+                 << "mm, plane rms " << mm(r.plane_rms) << "mm)";
+        else
+            line << " (skipped: " << r.reason << ")";
+    }
+    std::cout << line.str() << "\n";
+}
+
+// -------------------------------------------------------------------------
 void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& map)
 {
+    // What the pipeline does without tags, run unchanged...
+    computeGeometricCoarseFor(index, map);
+
     auto& scan = scans_[index];
+    if (!params_.use_tag_alignment || !scan.tag_fit.valid) return;
+
+    // ...then the tag pose, put to the same test.
+    const TagFit& fit = scan.tag_fit;
+    std::ostringstream ids;
+    for (size_t k = 0; k < fit.ids.size(); ++k) ids << (k ? "," : "") << fit.ids[k];
+
+    const AlignmentQuality tag_coverage = evaluateAlignment(scan.prepared, map, fit.transform, params_);
+    const AlignmentQuality tag_quality  = scoreAlignment(scan.prepared, map, fit.transform);
+    const bool tag_usable = tag_coverage.inlier_fraction >= params_.coarse_min_inlier_fraction;
+
+    const bool existing_ok = scan.status == ScanStatus::CoarseAligned;
+    const bool tags_win = tag_usable &&
+        (!existing_ok || tag_quality.score() < scan.coarse_quality.score());
+
+    std::cout << "  [tags] " << scan.label() << ": tags " << ids.str()
+              << " fit to " << mm(fit.rms) << "mm, score " << mm(tag_quality.score())
+              << " vs " << (scan.coarse_source.empty() ? "none" : scan.coarse_source) << " "
+              << (existing_ok ? mm(scan.coarse_quality.score()) : std::string("failed"));
+    if (!scan.coarse_source.empty())
+    {
+        // How far apart the two hypotheses put the scan: a few mm and a
+        // degree or so is the tags' own precision; tens of degrees means one
+        // of them is simply wrong.
+        const Eigen::Matrix4f delta = fit.transform * scan.coarse_transform.inverse();
+        const double angle = Eigen::AngleAxisf(Eigen::Matrix3f(delta.topLeftCorner<3, 3>())).angle();
+        const double shift = (fit.transform.topRightCorner<3, 1>() -
+                              scan.coarse_transform.topRightCorner<3, 1>()).norm();
+        std::cout << " (poses differ by " << std::fixed << std::setprecision(1)
+                  << angle * 180.0 / M_PI << " deg, camera " << mm(shift) << "mm)";
+    }
+    std::cout << (tag_usable ? "" : "  [tag pose covers too little of the map]")
+              << "  -> " << (tags_win ? std::string("tags") : scan.coarse_source) << "\n";
+
+    if (!scan.coarse_source.empty())
+    {
+        const Eigen::Matrix4f delta = fit.transform * scan.coarse_transform.inverse();
+        const double angle_deg =
+            Eigen::AngleAxisf(Eigen::Matrix3f(delta.topLeftCorner<3, 3>())).angle() * 180.0 / M_PI;
+        if (angle_deg > params_.tag_disagreement_warn_deg)
+        {
+            const int group = rotationGroupOf(index);
+            std::cerr << "  [!] tags put " << scan.label() << " " << std::fixed << std::setprecision(0)
+                      << angle_deg << " deg away from the " << scan.coarse_source << " pose"
+                      << (group >= 0 ? " - rotation group " + rotation_groups_[group].name +
+                                       " is probably resolved the wrong way"
+                                     : std::string()) << ". The surface alone cannot tell them"
+                         " apart here; check it in the viewer (t flips a group)\n";
+        }
+    }
+
+    if (!tags_win) return;
+    scan.coarse_transform = fit.transform;
+    scan.coarse_quality   = tag_quality;
+    scan.coarse_source    = "tags";
+    scan.status           = ScanStatus::CoarseAligned;
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::computeGeometricCoarseFor(size_t index, const PointCloudT::ConstPtr& map)
+{
+    auto& scan = scans_[index];
+    scan.coarse_source.clear();
 
     // Two questions, two measures. Whether a pose lands on the map at all is
     // a question of coverage - how much of the scan has map surface nearby -
@@ -445,6 +724,7 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
     {
         scan.coarse_transform = scan.input.initial_guess;
         scan.coarse_quality   = seed_quality;
+        scan.coarse_source    = "seed";
         scan.status           = ScanStatus::CoarseAligned;
         return;
     }
@@ -477,12 +757,14 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
     {
         scan.coarse_transform = fpfh.transform;
         scan.coarse_quality   = fpfh_quality;
+        scan.coarse_source    = "fpfh";
         chosen_coverage       = fpfh_coverage;
     }
     else if (have_seed)
     {
         scan.coarse_transform = scan.input.initial_guess;
         scan.coarse_quality   = seed_quality;
+        scan.coarse_source    = "seed";
         chosen_coverage       = seed_coverage;
     }
     else
@@ -1257,7 +1539,10 @@ double FusionSession::scoreDirectionHypothesis(const std::vector<size_t>& repres
 
     for (size_t k = 1; k < representatives.size(); ++k)
     {
-        cumulative += signs[k - 1] * rotation_groups_[k].nominal_step_deg;
+        if (rotation_groups_[k].from_tags)
+            cumulative = rotation_groups_[k].cumulative_deg;
+        else
+            cumulative += signs[k - 1] * rotation_groups_[k].nominal_step_deg;
 
         const auto& scan = scans_[representatives[k]];
         const Eigen::Matrix4f guess =
@@ -1300,7 +1585,11 @@ void FusionSession::runRotationDirectionStage(const ProgressFn& progress)
     if (reference_index_ >= scans_.size()) return;
 
     rotation_groups_[0].resolved = true;
+    for (auto& group : rotation_groups_) group.from_tags = false;
     applyRotationAngles(0);
+
+    if (params_.use_tag_alignment)
+        resolveRotationFromTags();
 
     // One representative per group - its lowest-tilt scan, which shares the
     // most surface with the others and so discriminates most sharply.
@@ -1325,8 +1614,21 @@ void FusionSession::runRotationDirectionStage(const ProgressFn& progress)
     }
 
     const size_t steps = rotation_groups_.size() - 1;
+
+    // Only the steps the tags did not settle are left to search.
+    std::vector<size_t> free_steps;
+    for (size_t k = 0; k < steps; ++k)
+        if (!rotation_groups_[k + 1].from_tags) free_steps.push_back(k);
+    if (free_steps.empty())
+    {
+        std::cout << "[rotation] every rotation group was placed by the tags - no search needed\n";
+        applyRotationAngles(1);
+        return;
+    }
+
     for (size_t k = 1; k < rotation_groups_.size(); ++k)
     {
+        if (rotation_groups_[k].from_tags) continue;
         if (rotation_groups_[k].nominal_step_deg == 0.0)
         {
             std::cout << "  [i] " << rotation_groups_[k].name
@@ -1339,20 +1641,20 @@ void FusionSession::runRotationDirectionStage(const ProgressFn& progress)
     double best_total = std::numeric_limits<double>::max();
     double runner_up = std::numeric_limits<double>::max();
 
-    if (steps <= static_cast<size_t>(params_.direction_max_joint_steps))
+    if (free_steps.size() <= static_cast<size_t>(params_.direction_max_joint_steps))
     {
         // Joint search: every combination of directions, scored as a whole.
-        const size_t combinations = size_t(1) << steps;
+        const size_t combinations = size_t(1) << free_steps.size();
         std::cout << "[rotation] searching " << combinations
-                  << " direction combination(s) across " << steps << " step(s)\n";
+                  << " direction combination(s) across " << free_steps.size() << " step(s)\n";
 
         for (size_t mask = 0; mask < combinations; ++mask)
         {
             if (progress) progress(mask, combinations, "direction search");
 
-            std::vector<float> signs(steps);
-            for (size_t k = 0; k < steps; ++k)
-                signs[k] = (mask & (size_t(1) << k)) ? -1.0f : 1.0f;
+            std::vector<float> signs(steps, 1.0f);
+            for (size_t b = 0; b < free_steps.size(); ++b)
+                signs[free_steps[b]] = (mask & (size_t(1) << b)) ? -1.0f : 1.0f;
 
             const double total = scoreDirectionHypothesis(representatives, signs, nullptr);
             if (total < best_total)
@@ -1370,9 +1672,9 @@ void FusionSession::runRotationDirectionStage(const ProgressFn& progress)
     else
     {
         // Too many steps to enumerate: settle each in turn, as before.
-        std::cout << "[rotation] " << steps << " steps is beyond the joint-search limit ("
+        std::cout << "[rotation] " << free_steps.size() << " steps is beyond the joint-search limit ("
                   << params_.direction_max_joint_steps << ") - resolving greedily\n";
-        for (size_t k = 0; k < steps; ++k)
+        for (size_t k : free_steps)
         {
             std::vector<float> plus = best_signs, minus = best_signs;
             plus[k] = 1.0f; minus[k] = -1.0f;
@@ -1391,6 +1693,7 @@ void FusionSession::runRotationDirectionStage(const ProgressFn& progress)
     for (size_t k = 1; k < rotation_groups_.size(); ++k)
     {
         auto& group = rotation_groups_[k];
+        if (group.from_tags) continue;
         group.step_sign = best_signs[k - 1];
         group.resolved = true;
         if (k - 1 < qualities.size()) group.chosen_quality = qualities[k - 1];
@@ -1402,7 +1705,7 @@ void FusionSession::runRotationDirectionStage(const ProgressFn& progress)
     // which would make even a well-determined early step look like a coin
     // toss. So ask the question that actually matters for each step - how
     // much worse does everything get if just this one is flipped?
-    for (size_t k = 0; k < steps; ++k)
+    for (size_t k : free_steps)
     {
         std::vector<float> flipped = best_signs;
         flipped[k] = -flipped[k];
@@ -1435,21 +1738,28 @@ void FusionSession::printRotationReport() const
     {
         const auto& g = rotation_groups_[k];
         std::ostringstream step;
-        if (k == 0) step << "(frame)";
-        else        step << (g.step_sign > 0 ? "+" : "-") << g.nominal_step_deg;
+        if (k == 0)           step << "(frame)";
+        else if (g.from_tags) step << "tags";
+        else                  step << (g.step_sign > 0 ? "+" : "-") << g.nominal_step_deg;
+
+        std::ostringstream margin;
+        if (k == 0)           margin << "-";
+        else if (g.from_tags) margin << "+-" << std::fixed << std::setprecision(1) << g.tag_spread_deg;
+        else                  margin << pct(g.margin);
 
         std::string short_name = g.name;
         if (short_name.size() > 29) short_name = short_name.substr(short_name.size() - 29);
         std::cout << "  " << std::left << std::setw(29) << short_name << std::right
                   << "  " << std::setw(8) << step.str()
                   << "  " << std::setw(10) << g.cumulative_deg
-                  << "  " << std::setw(6) << (k == 0 ? "-" : pct(g.margin))
+                  << "  " << std::setw(6) << margin.str()
                   << "  " << std::setw(5) << g.scans.size();
         if (g.ambiguous) std::cout << "   [AMBIGUOUS]";
         std::cout << "\n";
     }
     std::cout << "  (a low margin means both directions fit about as well - "
-                 "check those visually and press t to flip)\n";
+                 "check those visually and press t to flip;\n"
+                 "   'tags' groups were measured from the AprilTags, margin = spread in degrees)\n";
 }
 
 // -------------------------------------------------------------------------
@@ -1460,6 +1770,8 @@ void FusionSession::runCoarseBatch(const ProgressFn& progress)
         std::cerr << "  [!] no loadable reference scan - nothing to align against\n";
         return;
     }
+
+    if (params_.use_tag_alignment) solveTagPoses();
 
     // Running map, added to as scans are placed rather than rebuilt per scan.
     VoxelMap map(mapLeafSize());
@@ -1483,6 +1795,7 @@ void FusionSession::runCoarseBatch(const ProgressFn& progress)
         std::cout << "[coarse] " << scan.label()
                   << "  rmse=" << mm(scan.coarse_quality.rmse) << "mm"
                   << "  overlap=" << pct(scan.coarse_quality.inlier_fraction)
+                  << "  via " << (scan.coarse_source.empty() ? "-" : scan.coarse_source)
                   << "  (" << toString(scan.status) << ")\n";
 
         if (!contributesToFusion(scan.status)) continue;
@@ -1611,6 +1924,7 @@ void FusionSession::coarseAlignScan(size_t index)
     std::cout << "[coarse] " << scan.label()
               << "  rmse=" << mm(scan.coarse_quality.rmse) << "mm"
               << "  overlap=" << pct(scan.coarse_quality.inlier_fraction)
+              << "  via " << (scan.coarse_source.empty() ? "-" : scan.coarse_source)
               << "  (" << toString(scan.status) << ")\n";
 }
 
@@ -1747,8 +2061,8 @@ std::vector<ScanContribution> FusionSession::buildContributions() const
 void FusionSession::printReport(const std::string& title) const
 {
     std::cout << "\n" << title << "\n";
-    std::cout << "  idx  status         rmse(mm)  overlap  icp_fitness  points  scan\n";
-    std::cout << "  ---  -------------  --------  -------  -----------  ------  ----\n";
+    std::cout << "  idx  status         rmse(mm)  overlap  coarse  icp_fitness  points  scan\n";
+    std::cout << "  ---  -------------  --------  -------  ------  -----------  ------  ----\n";
 
     for (size_t i = 0; i < scans_.size(); ++i)
     {
@@ -1759,7 +2073,8 @@ void FusionSession::printReport(const std::string& title) const
         std::cout << "  " << std::setw(3) << i << "  "
                   << std::left << std::setw(13) << toString(s.status) << std::right << "  "
                   << std::setw(8) << mm(q.rmse) << "  "
-                  << std::setw(7) << (q.valid() ? pct(q.inlier_fraction) : "-") << "  ";
+                  << std::setw(7) << (q.valid() ? pct(q.inlier_fraction) : "-") << "  "
+                  << std::setw(6) << (s.coarse_source.empty() ? "-" : s.coarse_source) << "  ";
 
         if (s.icp_result.converged)
             std::cout << std::setw(11) << std::fixed << std::setprecision(6) << s.icp_result.fitness_score;

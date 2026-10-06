@@ -1,0 +1,2017 @@
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <ima:enforcing>
+  <https://debuginfod.fedoraproject.org/>
+  <ima:ignore>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+[New Thread 0x7fff3e1ff6c0 (LWP 257444)]
+[New Thread 0x7fff3d9fe6c0 (LWP 257445)]
+[Thread 0x7fff3d9fe6c0 (LWP 257445) exited]
+[New Thread 0x7fff3d9fe6c0 (LWP 257446)]
+[Thread 0x7fff3d9fe6c0 (LWP 257446) exited]
+[New Thread 0x7fff3d9fe6c0 (LWP 257448)]
+[New Thread 0x7fff3d1fd6c0 (LWP 257449)]
+[Thread 0x7fff3d1fd6c0 (LWP 257449) exited]
+[New Thread 0x7fff3d1fd6c0 (LWP 257450)]
+[New Thread 0x7fff3c9fc6c0 (LWP 257451)]
+[New Thread 0x7fff3c1fb6c0 (LWP 257452)]
+[New Thread 0x7fff3b9fa6c0 (LWP 257453)]
+[New Thread 0x7fff3b1f96c0 (LWP 257454)]
+[New Thread 0x7fff3a9f86c0 (LWP 257455)]
+[New Thread 0x7fff3a1f76c0 (LWP 257456)]
+[New Thread 0x7fff399f66c0 (LWP 257457)]
+[New Thread 0x7fff391f56c0 (LWP 257458)]
+[New Thread 0x7fff389f46c0 (LWP 257526)]
+[Thread 0x7fff389f46c0 (LWP 257526) exited]
+[New Thread 0x7fff389f46c0 (LWP 257527)]
+[New Thread 0x7fff381f36c0 (LWP 257528)]
+[New Thread 0x7fff379f26c0 (LWP 257529)]
+[New Thread 0x7fff371f16c0 (LWP 257530)]
+[New Thread 0x7fff369f06c0 (LWP 257531)]
+[New Thread 0x7fff361ef6c0 (LWP 257532)]
+[New Thread 0x7fff359ee6c0 (LWP 257533)]
+[New Thread 0x7fff351ed6c0 (LWP 257534)]
+[New Thread 0x7fff349ec6c0 (LWP 257535)]
+[New Thread 0x7fff341eb6c0 (LWP 257536)]
+[New Thread 0x7fff339ea6c0 (LWP 257537)]
+[New Thread 0x7fff331e96c0 (LWP 257538)]
+[New Thread 0x7fff329e86c0 (LWP 257539)]
+[New Thread 0x7fff321e76c0 (LWP 257540)]
+[New Thread 0x7fff312da6c0 (LWP 257541)]
+[New Thread 0x7fff23fff6c0 (LWP 257542)]
+[New Thread 0x7fff237fe6c0 (LWP 257543)]
+[New Thread 0x7fff22ffd6c0 (LWP 257544)]
+[Thread 0x7fff331e96c0 (LWP 257538) exited]
+[Thread 0x7fff321e76c0 (LWP 257540) exited]
+[New Thread 0x7fff321e76c0 (LWP 257545)]
+[New Thread 0x7fff219b16c0 (LWP 257547)]
+[New Thread 0x7fff331e96c0 (LWP 257546)]
+[New Thread 0x7fff211af6c0 (LWP 257549)]
+[New Thread 0x7fff215b06c0 (LWP 257548)]
+[New Thread 0x7fff209ad6c0 (LWP 257551)]
+[New Thread 0x7fff20dae6c0 (LWP 257550)]
+[New Thread 0x7ffefbbfe6c0 (LWP 257554)]
+[New Thread 0x7fff205ac6c0 (LWP 257552)]
+[New Thread 0x7ffefbfff6c0 (LWP 257553)]
+[New Thread 0x7ffefb7fd6c0 (LWP 257555)]
+[New Thread 0x7ffefb3fc6c0 (LWP 257556)]
+[New Thread 0x7ffefaffb6c0 (LWP 257557)]
+[New Thread 0x7ffefabfa6c0 (LWP 257558)]
+[New Thread 0x7ffefa7f96c0 (LWP 257559)]
+[New Thread 0x7ffefa3f86c0 (LWP 257560)]
+[New Thread 0x7ffec1dff6c0 (LWP 257561)]
+[New Thread 0x7ffec15fe6c0 (LWP 257562)]
+[New Thread 0x7ffeba7ff6c0 (LWP 257563)]
+[New Thread 0x7ffeb9ffe6c0 (LWP 257564)]
+[New Thread 0x7ffeb97fd6c0 (LWP 257566)]
+[New Thread 0x7ffeb8ffc6c0 (LWP 257567)]
+[New Thread 0x7ffe9ffff6c0 (LWP 257568)]
+[New Thread 0x7ffea7fff6c0 (LWP 257569)]
+[New Thread 0x7ffea77fe6c0 (LWP 257570)]
+Serial Port: 4
+Connection Established at /dev/ttyACM0
+Received message: H0000.0
+
+Rotation: /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0
+Beginning loop now
+Number of iterations = 11
+Iteration 0
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.001 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/20261002_160830_r0_a0.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/20261002_160830_r0_a0_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/20261002_160830_r0_a0.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/imu_a0.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.704m Holes: 101289     [New Thread 0x7ffea6ffd6c0 (LWP 257575)]
+frames:      5  fps:   2.5  depth:  0.704m Holes: 100903     frames:     10  fps:   4.3  depth:  0.704m Holes: 100701     frames:     15  fps:   5.7  depth:  0.704m Holes: 100913     frames:     20  fps:   6.8  depth:  0.704m Holes: 100978     frames:     25  fps:   7.7  depth:  0.704m Holes: 101038     frames:     30  fps:   8.4  depth:  0.704m Holes: 101029     frames:     35  fps:   9.0  depth:  0.704m Holes: 100922     frames:     40  fps:   9.5  depth:  0.704m Holes: 100901     frames:     45  fps:   9.9  depth:  0.704m Holes: 100986     frames:     50  fps:  10.3  depth:  0.704m Holes: 100795     frames:     55  fps:  10.5  depth:  0.704m Holes: 100873     frames:     60  fps:  10.8  depth:  0.704m Holes: 100827     frames:     65  fps:  10.9  depth:  0.704m Holes: 100792     frames:     70  fps:  11.2  depth:  0.704m Holes: 100708     frames:     75  fps:  11.4  depth:  0.704m Holes: 100889     frames:     80  fps:  11.5  depth:  0.704m Holes: 101087     frames:     85  fps:  11.7  depth:  0.704m Holes: 101081     [Thread 0x7fff22ffd6c0 (LWP 257544) exited]
+[Thread 0x7fff237fe6c0 (LWP 257543) exited]
+[Thread 0x7fff23fff6c0 (LWP 257542) exited]
+[Thread 0x7fff312da6c0 (LWP 257541) exited]
+[Thread 0x7fff339ea6c0 (LWP 257537) exited]
+[Thread 0x7fff329e86c0 (LWP 257539) exited]
+[Thread 0x7fff341eb6c0 (LWP 257536) exited]
+[New Thread 0x7fff341eb6c0 (LWP 257745)]
+[Thread 0x7fff341eb6c0 (LWP 257745) exited]
+[New Thread 0x7fff341eb6c0 (LWP 257746)]
+[New Thread 0x7fff329e86c0 (LWP 257747)]
+[New Thread 0x7fff339ea6c0 (LWP 257748)]
+[New Thread 0x7fff312da6c0 (LWP 257749)]
+[New Thread 0x7fff30ad96c0 (LWP 257750)]
+[New Thread 0x7fff23fff6c0 (LWP 257751)]
+[New Thread 0x7fff237fe6c0 (LWP 257752)]
+[New Thread 0x7fff22ffd6c0 (LWP 257753)]
+[New Thread 0x7ffea56f86c0 (LWP 257754)]
+[Thread 0x7fff3b9fa6c0 (LWP 257453) exited]
+[Thread 0x7fff3d1fd6c0 (LWP 257450) exited]
+[Thread 0x7fff3c9fc6c0 (LWP 257451) exited]
+[Thread 0x7fff3b1f96c0 (LWP 257454) exited]
+[Thread 0x7fff3c1fb6c0 (LWP 257452) exited]
+[Thread 0x7fff3a9f86c0 (LWP 257455) exited]
+[Thread 0x7fff3a1f76c0 (LWP 257456) exited]
+[Thread 0x7fff399f66c0 (LWP 257457) exited]
+[Thread 0x7fff391f56c0 (LWP 257458) exited]
+[New Thread 0x7fff391f56c0 (LWP 257755)]
+[Thread 0x7fff391f56c0 (LWP 257755) exited]
+[New Thread 0x7fff391f56c0 (LWP 257756)]
+[New Thread 0x7fff399f66c0 (LWP 257757)]
+[New Thread 0x7fff3a1f76c0 (LWP 257758)]
+[New Thread 0x7fff3a9f86c0 (LWP 257759)]
+[New Thread 0x7fff3d1fd6c0 (LWP 257760)]
+[New Thread 0x7fff3c9fc6c0 (LWP 257761)]
+[New Thread 0x7fff3c1fb6c0 (LWP 257762)]
+[New Thread 0x7fff3b9fa6c0 (LWP 257763)]
+[New Thread 0x7fff3b1f96c0 (LWP 257764)]
+[New Thread 0x7ffea4ef76c0 (LWP 257765)]
+[New Thread 0x7ffe9f7fe6c0 (LWP 257766)]
+[New Thread 0x7ffe9effd6c0 (LWP 257767)]
+[New Thread 0x7ffe9e7fc6c0 (LWP 257768)]
+[New Thread 0x7ffe9dffb6c0 (LWP 257769)]
+[New Thread 0x7ffe9d7fa6c0 (LWP 257770)]
+[New Thread 0x7ffe9cff96c0 (LWP 257771)]
+[New Thread 0x7ffe87fff6c0 (LWP 257772)]
+[New Thread 0x7ffe877fe6c0 (LWP 257773)]
+[Thread 0x7ffe9effd6c0 (LWP 257767) exited]
+[Thread 0x7ffe9dffb6c0 (LWP 257769) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 10.67s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/20261002_160830_r0_a0_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/20261002_160830_r0_a0.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/20261002_160830_r0_a0.ply  (frame 84)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/imu_a0.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a0/scan_info.txt
+Received message: S0005.0
+
+Iteration 1
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/20261002_160830_r0_a5.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/20261002_160830_r0_a5_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/20261002_160830_r0_a5.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/imu_a5.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.709m Holes: 99826     frames:      5  fps:   3.1  depth:  0.709m Holes: 99771     frames:     10  fps:   4.6  depth:  0.709m Holes: 100004     frames:     15  fps:   5.9  depth:  0.709m Holes: 100308     frames:     20  fps:   6.8  depth:  0.709m Holes: 99711     frames:     25  fps:   7.6  depth:  0.709m Holes: 100312     frames:     30  fps:   8.1  depth:  0.709m Holes: 100061     frames:     35  fps:   8.6  depth:  0.709m Holes: 100013     frames:     40  fps:   8.9  depth:  0.709m Holes: 100232     frames:     45  fps:   9.2  depth:  0.709m Holes: 100139     frames:     50  fps:   9.5  depth:  0.709m Holes: 100161     frames:     55  fps:   9.7  depth:  0.709m Holes: 100273     frames:     60  fps:   9.9  depth:  0.709m Holes: 99902     frames:     65  fps:   9.8  depth:  0.709m Holes: 99510     frames:     70  fps:   9.5  depth:  0.709m Holes: 100119     frames:     75  fps:   9.2  depth:  0.709m Holes: 100311     frames:     80  fps:   9.0  depth:  0.709m Holes: 99667     frames:     85  fps:   8.8  depth:  0.709m Holes: 100377     [Thread 0x7ffe877fe6c0 (LWP 257773) exited]
+[Thread 0x7ffe87fff6c0 (LWP 257772) exited]
+[Thread 0x7ffe9cff96c0 (LWP 257771) exited]
+[Thread 0x7ffe9d7fa6c0 (LWP 257770) exited]
+[Thread 0x7ffe9f7fe6c0 (LWP 257766) exited]
+[Thread 0x7ffe9e7fc6c0 (LWP 257768) exited]
+[Thread 0x7ffea4ef76c0 (LWP 257765) exited]
+[New Thread 0x7ffea4ef76c0 (LWP 258068)]
+[Thread 0x7ffea4ef76c0 (LWP 258068) exited]
+[New Thread 0x7ffea4ef76c0 (LWP 258069)]
+[New Thread 0x7ffe9e7fc6c0 (LWP 258070)]
+[New Thread 0x7ffe9f7fe6c0 (LWP 258071)]
+[New Thread 0x7ffe9d7fa6c0 (LWP 258072)]
+[New Thread 0x7ffe9effd6c0 (LWP 258073)]
+[New Thread 0x7ffe9dffb6c0 (LWP 258074)]
+[New Thread 0x7ffe9cff96c0 (LWP 258075)]
+[New Thread 0x7ffe87fff6c0 (LWP 258076)]
+[New Thread 0x7ffe877fe6c0 (LWP 258077)]
+[Thread 0x7fff312da6c0 (LWP 257749) exited]
+[Thread 0x7fff341eb6c0 (LWP 257746) exited]
+[Thread 0x7fff339ea6c0 (LWP 257748) exited]
+[Thread 0x7fff30ad96c0 (LWP 257750) exited]
+[Thread 0x7fff329e86c0 (LWP 257747) exited]
+[Thread 0x7fff23fff6c0 (LWP 257751) exited]
+[Thread 0x7fff237fe6c0 (LWP 257752) exited]
+[Thread 0x7fff22ffd6c0 (LWP 257753) exited]
+[Thread 0x7ffea56f86c0 (LWP 257754) exited]
+[New Thread 0x7ffea56f86c0 (LWP 258078)]
+[Thread 0x7ffea56f86c0 (LWP 258078) exited]
+[New Thread 0x7ffea56f86c0 (LWP 258079)]
+[New Thread 0x7fff22ffd6c0 (LWP 258080)]
+[New Thread 0x7fff237fe6c0 (LWP 258081)]
+[New Thread 0x7fff23fff6c0 (LWP 258082)]
+[New Thread 0x7fff341eb6c0 (LWP 258083)]
+[New Thread 0x7fff339ea6c0 (LWP 258084)]
+[New Thread 0x7fff329e86c0 (LWP 258085)]
+[New Thread 0x7fff319e66c0 (LWP 258086)]
+[New Thread 0x7fff311e56c0 (LWP 258087)]
+[New Thread 0x7ffe86ffd6c0 (LWP 258088)]
+[New Thread 0x7ffe867fc6c0 (LWP 258090)]
+[New Thread 0x7ffe85ffb6c0 (LWP 258091)]
+[New Thread 0x7ffe857fa6c0 (LWP 258092)]
+[New Thread 0x7ffe84ff96c0 (LWP 258093)]
+[New Thread 0x7ffe7bfff6c0 (LWP 258094)]
+[New Thread 0x7ffe7b7fe6c0 (LWP 258095)]
+[New Thread 0x7ffe7affd6c0 (LWP 258096)]
+[New Thread 0x7ffe7a7fc6c0 (LWP 258097)]
+[Thread 0x7ffe85ffb6c0 (LWP 258091) exited]
+[Thread 0x7ffe84ff96c0 (LWP 258093) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 14.74s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/20261002_160830_r0_a5_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/20261002_160830_r0_a5.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/20261002_160830_r0_a5.ply  (frame 65)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/imu_a5.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a5/scan_info.txt
+Received message: S0010.0
+
+Iteration 2
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/20261002_160830_r0_a10.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/20261002_160830_r0_a10_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/20261002_160830_r0_a10.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/imu_a10.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.719m Holes: 100748     frames:      5  fps:   3.0  depth:  0.719m Holes: 100576     frames:     10  fps:   4.1  depth:  0.719m Holes: 100522     frames:     15  fps:   4.7  depth:  0.719m Holes: 100654     frames:     20  fps:   5.4  depth:  0.719m Holes: 100195     frames:     25  fps:   6.1  depth:  0.719m Holes: 100478     frames:     30  fps:   6.7  depth:  0.719m Holes: 100645     frames:     35  fps:   7.2  depth:  0.719m Holes: 100478     frames:     40  fps:   7.6  depth:  0.719m Holes: 100300     frames:     45  fps:   8.0  depth:  0.719m Holes: 100262     frames:     50  fps:   8.3  depth:  0.719m Holes: 100519     frames:     55  fps:   8.6  depth:  0.719m Holes: 100323     frames:     60  fps:   8.8  depth:  0.719m Holes: 100122     frames:     65  fps:   9.0  depth:  0.719m Holes: 100487     frames:     70  fps:   9.2  depth:  0.719m Holes: 100555     frames:     75  fps:   9.1  depth:  0.719m Holes: 100428     frames:     80  fps:   8.9  depth:  0.719m Holes: 100281     frames:     85  fps:   8.7  depth:  0.719m Holes: 100181     [Thread 0x7ffe7a7fc6c0 (LWP 258097) exited]
+[Thread 0x7ffe7affd6c0 (LWP 258096) exited]
+[Thread 0x7ffe7b7fe6c0 (LWP 258095) exited]
+[Thread 0x7ffe7bfff6c0 (LWP 258094) exited]
+[Thread 0x7ffe867fc6c0 (LWP 258090) exited]
+[Thread 0x7ffe857fa6c0 (LWP 258092) exited]
+[Thread 0x7ffe86ffd6c0 (LWP 258088) exited]
+[New Thread 0x7ffe86ffd6c0 (LWP 258417)]
+[Thread 0x7ffe86ffd6c0 (LWP 258417) exited]
+[New Thread 0x7ffe86ffd6c0 (LWP 258418)]
+[New Thread 0x7ffe857fa6c0 (LWP 258419)]
+[New Thread 0x7ffe867fc6c0 (LWP 258420)]
+[New Thread 0x7ffe7bfff6c0 (LWP 258421)]
+[New Thread 0x7ffe85ffb6c0 (LWP 258422)]
+[New Thread 0x7ffe84ff96c0 (LWP 258423)]
+[New Thread 0x7ffe7b7fe6c0 (LWP 258424)]
+[New Thread 0x7ffe7affd6c0 (LWP 258425)]
+[New Thread 0x7ffe7a7fc6c0 (LWP 258426)]
+[Thread 0x7ffe9d7fa6c0 (LWP 258072) exited]
+[Thread 0x7ffea4ef76c0 (LWP 258069) exited]
+[Thread 0x7ffe9e7fc6c0 (LWP 258070) exited]
+[Thread 0x7ffe9dffb6c0 (LWP 258074) exited]
+[Thread 0x7ffe9effd6c0 (LWP 258073) exited]
+[Thread 0x7ffe9f7fe6c0 (LWP 258071) exited]
+[Thread 0x7ffe9cff96c0 (LWP 258075) exited]
+[Thread 0x7ffe87fff6c0 (LWP 258076) exited]
+[Thread 0x7ffe877fe6c0 (LWP 258077) exited]
+[New Thread 0x7ffe877fe6c0 (LWP 258427)]
+[Thread 0x7ffe877fe6c0 (LWP 258427) exited]
+[New Thread 0x7ffe877fe6c0 (LWP 258428)]
+[New Thread 0x7ffe87fff6c0 (LWP 258429)]
+[New Thread 0x7ffe9cff96c0 (LWP 258430)]
+[New Thread 0x7ffe9dffb6c0 (LWP 258431)]
+[New Thread 0x7ffea4ef76c0 (LWP 258432)]
+[New Thread 0x7ffe9f7fe6c0 (LWP 258433)]
+[New Thread 0x7ffe9effd6c0 (LWP 258434)]
+[New Thread 0x7ffe9e7fc6c0 (LWP 258435)]
+[New Thread 0x7ffe9d7fa6c0 (LWP 258436)]
+[New Thread 0x7ffe79ffb6c0 (LWP 258437)]
+[New Thread 0x7ffe797fa6c0 (LWP 258438)]
+[New Thread 0x7ffe78ff96c0 (LWP 258439)]
+[New Thread 0x7ffe73fff6c0 (LWP 258440)]
+[New Thread 0x7ffe737fe6c0 (LWP 258441)]
+[New Thread 0x7ffe72ffd6c0 (LWP 258442)]
+[New Thread 0x7ffe727fc6c0 (LWP 258443)]
+[New Thread 0x7ffe71ffb6c0 (LWP 258444)]
+[New Thread 0x7ffe717fa6c0 (LWP 258445)]
+[Thread 0x7ffe78ff96c0 (LWP 258439) exited]
+[Thread 0x7ffe737fe6c0 (LWP 258441) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 14.70s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/20261002_160830_r0_a10_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/20261002_160830_r0_a10.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/20261002_160830_r0_a10.ply  (frame 86)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/imu_a10.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a10/scan_info.txt
+Received message: S0015.0
+
+Iteration 3
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/20261002_160830_r0_a15.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/20261002_160830_r0_a15_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/20261002_160830_r0_a15.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/imu_a15.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.737m Holes: 103351     frames:      5  fps:   3.0  depth:  0.737m Holes: 103420     frames:     10  fps:   4.1  depth:  0.737m Holes: 103267     frames:     15  fps:   4.7  depth:  0.737m Holes: 103509     frames:     20  fps:   5.0  depth:  0.737m Holes: 103486     frames:     25  fps:   5.3  depth:  0.737m Holes: 103463     frames:     30  fps:   5.7  depth:  0.737m Holes: 103692     frames:     35  fps:   6.2  depth:  0.737m Holes: 103555     frames:     40  fps:   6.6  depth:  0.737m Holes: 103549     frames:     45  fps:   7.0  depth:  0.737m Holes: 103071     frames:     50  fps:   7.3  depth:  0.737m Holes: 103551     frames:     55  fps:   7.6  depth:  0.737m Holes: 103677     frames:     60  fps:   7.9  depth:  0.737m Holes: 103494     frames:     65  fps:   8.1  depth:  0.737m Holes: 103297     frames:     70  fps:   8.3  depth:  0.737m Holes: 103483     frames:     75  fps:   8.5  depth:  0.737m Holes: 103019     frames:     80  fps:   8.7  depth:  0.737m Holes: 103471     frames:     85  fps:   8.7  depth:  0.737m Holes: 103281     [Thread 0x7ffe717fa6c0 (LWP 258445) exited]
+[Thread 0x7ffe71ffb6c0 (LWP 258444) exited]
+[Thread 0x7ffe727fc6c0 (LWP 258443) exited]
+[Thread 0x7ffe72ffd6c0 (LWP 258442) exited]
+[Thread 0x7ffe73fff6c0 (LWP 258440) exited]
+[Thread 0x7ffe797fa6c0 (LWP 258438) exited]
+[Thread 0x7ffe79ffb6c0 (LWP 258437) exited]
+[New Thread 0x7ffe79ffb6c0 (LWP 258676)]
+[Thread 0x7ffe79ffb6c0 (LWP 258676) exited]
+[New Thread 0x7ffe79ffb6c0 (LWP 258677)]
+[New Thread 0x7ffe73fff6c0 (LWP 258678)]
+[New Thread 0x7ffe797fa6c0 (LWP 258679)]
+[New Thread 0x7ffe72ffd6c0 (LWP 258680)]
+[New Thread 0x7ffe78ff96c0 (LWP 258681)]
+[New Thread 0x7ffe737fe6c0 (LWP 258682)]
+[New Thread 0x7ffe727fc6c0 (LWP 258683)]
+[New Thread 0x7ffe71ffb6c0 (LWP 258684)]
+[New Thread 0x7ffe717fa6c0 (LWP 258685)]
+[Thread 0x7ffe7bfff6c0 (LWP 258421) exited]
+[Thread 0x7ffe857fa6c0 (LWP 258419) exited]
+[Thread 0x7ffe86ffd6c0 (LWP 258418) exited]
+[Thread 0x7ffe867fc6c0 (LWP 258420) exited]
+[Thread 0x7ffe85ffb6c0 (LWP 258422) exited]
+[Thread 0x7ffe7affd6c0 (LWP 258425) exited]
+[Thread 0x7ffe7b7fe6c0 (LWP 258424) exited]
+[Thread 0x7ffe84ff96c0 (LWP 258423) exited]
+[Thread 0x7ffe7a7fc6c0 (LWP 258426) exited]
+[New Thread 0x7ffe7a7fc6c0 (LWP 258695)]
+[Thread 0x7ffe7a7fc6c0 (LWP 258695) exited]
+[New Thread 0x7ffe7a7fc6c0 (LWP 258696)]
+[New Thread 0x7ffe7affd6c0 (LWP 258697)]
+[New Thread 0x7ffe7b7fe6c0 (LWP 258698)]
+[New Thread 0x7ffe84ff96c0 (LWP 258699)]
+[New Thread 0x7ffe86ffd6c0 (LWP 258700)]
+[New Thread 0x7ffe867fc6c0 (LWP 258701)]
+[New Thread 0x7ffe85ffb6c0 (LWP 258702)]
+[New Thread 0x7ffe857fa6c0 (LWP 258703)]
+[New Thread 0x7ffe7bfff6c0 (LWP 258704)]
+[New Thread 0x7ffe70ff96c0 (LWP 258705)]
+[New Thread 0x7ffe67fff6c0 (LWP 258706)]
+[New Thread 0x7ffe677fe6c0 (LWP 258707)]
+[New Thread 0x7ffe66ffd6c0 (LWP 258708)]
+[New Thread 0x7ffe667fc6c0 (LWP 258709)]
+[New Thread 0x7ffe65ffb6c0 (LWP 258710)]
+[New Thread 0x7ffe657fa6c0 (LWP 258711)]
+[New Thread 0x7ffe64ff96c0 (LWP 258712)]
+[New Thread 0x7ffe5ffff6c0 (LWP 258713)]
+[Thread 0x7ffe677fe6c0 (LWP 258707) exited]
+[Thread 0x7ffe667fc6c0 (LWP 258709) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 14.70s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/20261002_160830_r0_a15_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/20261002_160830_r0_a15.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/20261002_160830_r0_a15.ply  (frame 75)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/imu_a15.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a15/scan_info.txt
+Received message: S0020.0
+
+Iteration 4
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/20261002_160830_r0_a20.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/20261002_160830_r0_a20_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/20261002_160830_r0_a20.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/imu_a20.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.761m Holes: 106765     frames:      5  fps:   3.0  depth:  0.761m Holes: 107147     frames:     10  fps:   4.5  depth:  0.761m Holes: 107131     frames:     15  fps:   5.8  depth:  0.761m Holes: 107013     frames:     20  fps:   6.7  depth:  0.761m Holes: 106824     frames:     25  fps:   7.4  depth:  0.761m Holes: 107048     frames:     30  fps:   7.9  depth:  0.761m Holes: 107261     frames:     35  fps:   8.3  depth:  0.761m Holes: 107100     frames:     40  fps:   8.7  depth:  0.761m Holes: 107164     frames:     45  fps:   9.0  depth:  0.761m Holes: 107053     frames:     50  fps:   9.2  depth:  0.761m Holes: 107207     frames:     55  fps:   9.4  depth:  0.761m Holes: 107449     frames:     60  fps:   9.6  depth:  0.761m Holes: 107499     frames:     65  fps:   9.3  depth:  0.761m Holes: 107112     frames:     70  fps:   9.0  depth:  0.761m Holes: 106994     frames:     75  fps:   8.7  depth:  0.761m Holes: 106997     frames:     80  fps:   8.5  depth:  0.761m Holes: 107017     frames:     85  fps:   8.3  depth:  0.761m Holes: 107298     [Thread 0x7ffe5ffff6c0 (LWP 258713) exited]
+[Thread 0x7ffe64ff96c0 (LWP 258712) exited]
+[Thread 0x7ffe657fa6c0 (LWP 258711) exited]
+[Thread 0x7ffe65ffb6c0 (LWP 258710) exited]
+[Thread 0x7ffe67fff6c0 (LWP 258706) exited]
+[Thread 0x7ffe66ffd6c0 (LWP 258708) exited]
+[Thread 0x7ffe70ff96c0 (LWP 258705) exited]
+[New Thread 0x7ffe70ff96c0 (LWP 259018)]
+[Thread 0x7ffe70ff96c0 (LWP 259018) exited]
+[New Thread 0x7ffe70ff96c0 (LWP 259019)]
+[New Thread 0x7ffe66ffd6c0 (LWP 259020)]
+[New Thread 0x7ffe67fff6c0 (LWP 259021)]
+[New Thread 0x7ffe65ffb6c0 (LWP 259022)]
+[New Thread 0x7ffe677fe6c0 (LWP 259023)]
+[New Thread 0x7ffe667fc6c0 (LWP 259024)]
+[New Thread 0x7ffe657fa6c0 (LWP 259025)]
+[New Thread 0x7ffe64ff96c0 (LWP 259026)]
+[New Thread 0x7ffe5ffff6c0 (LWP 259027)]
+[Thread 0x7ffe72ffd6c0 (LWP 258680) exited]
+[Thread 0x7ffe79ffb6c0 (LWP 258677) exited]
+[Thread 0x7ffe73fff6c0 (LWP 258678) exited]
+[Thread 0x7ffe797fa6c0 (LWP 258679) exited]
+[Thread 0x7ffe78ff96c0 (LWP 258681) exited]
+[Thread 0x7ffe737fe6c0 (LWP 258682) exited]
+[Thread 0x7ffe727fc6c0 (LWP 258683) exited]
+[Thread 0x7ffe71ffb6c0 (LWP 258684) exited]
+[Thread 0x7ffe717fa6c0 (LWP 258685) exited]
+[New Thread 0x7ffe717fa6c0 (LWP 259028)]
+[Thread 0x7ffe717fa6c0 (LWP 259028) exited]
+[New Thread 0x7ffe717fa6c0 (LWP 259029)]
+[New Thread 0x7ffe71ffb6c0 (LWP 259030)]
+[New Thread 0x7ffe727fc6c0 (LWP 259031)]
+[New Thread 0x7ffe737fe6c0 (LWP 259032)]
+[New Thread 0x7ffe79ffb6c0 (LWP 259033)]
+[New Thread 0x7ffe797fa6c0 (LWP 259034)]
+[New Thread 0x7ffe78ff96c0 (LWP 259035)]
+[New Thread 0x7ffe73fff6c0 (LWP 259036)]
+[New Thread 0x7ffe72ffd6c0 (LWP 259037)]
+[New Thread 0x7ffe5f7fe6c0 (LWP 259038)]
+[New Thread 0x7ffe5effd6c0 (LWP 259039)]
+[New Thread 0x7ffe5e7fc6c0 (LWP 259040)]
+[New Thread 0x7ffe5dffb6c0 (LWP 259041)]
+[New Thread 0x7ffe5d7fa6c0 (LWP 259042)]
+[New Thread 0x7ffe5cff96c0 (LWP 259043)]
+[New Thread 0x7ffe57fff6c0 (LWP 259044)]
+[New Thread 0x7ffe577fe6c0 (LWP 259045)]
+[New Thread 0x7ffe56ffd6c0 (LWP 259046)]
+[Thread 0x7ffe5e7fc6c0 (LWP 259040) exited]
+[Thread 0x7ffe5d7fa6c0 (LWP 259042) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 14.60s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/20261002_160830_r0_a20_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/20261002_160830_r0_a20.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/20261002_160830_r0_a20.ply  (frame 46)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/imu_a20.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a20/scan_info.txt
+Received message: S0025.0
+
+Iteration 5
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/20261002_160830_r0_a25.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/20261002_160830_r0_a25_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/20261002_160830_r0_a25.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/imu_a25.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.807m Holes: 112456     frames:      5  fps:   3.2  depth:  0.817m Holes: 113276     frames:     10  fps:   4.3  depth:  0.813m Holes: 112713     frames:     15  fps:   4.9  depth:  0.848m Holes: 112004     frames:     20  fps:   5.4  depth:  0.829m Holes: 112464     frames:     25  fps:   6.1  depth:  0.813m Holes: 112454     frames:     30  fps:   6.7  depth:  0.820m Holes: 112723     frames:     35  fps:   7.2  depth:  0.827m Holes: 111969     frames:     40  fps:   7.5  depth:  0.816m Holes: 112893     frames:     45  fps:   7.9  depth:  0.826m Holes: 112013     frames:     50  fps:   8.2  depth:  0.831m Holes: 112806     frames:     55  fps:   8.4  depth:  0.818m Holes: 112807     frames:     60  fps:   8.6  depth:  0.818m Holes: 112937     frames:     65  fps:   8.9  depth:  0.811m Holes: 112742     frames:     70  fps:   9.0  depth:  0.814m Holes: 113474     frames:     75  fps:   8.9  depth:  0.831m Holes: 112165     frames:     80  fps:   8.7  depth:  0.818m Holes: 112937     frames:     85  fps:   8.6  depth:  0.836m Holes: 112338     [Thread 0x7ffe56ffd6c0 (LWP 259046) exited]
+[Thread 0x7ffe577fe6c0 (LWP 259045) exited]
+[Thread 0x7ffe57fff6c0 (LWP 259044) exited]
+[Thread 0x7ffe5cff96c0 (LWP 259043) exited]
+[Thread 0x7ffe5effd6c0 (LWP 259039) exited]
+[Thread 0x7ffe5dffb6c0 (LWP 259041) exited]
+[Thread 0x7ffe5f7fe6c0 (LWP 259038) exited]
+[New Thread 0x7ffe5f7fe6c0 (LWP 259354)]
+[Thread 0x7ffe5f7fe6c0 (LWP 259354) exited]
+[New Thread 0x7ffe5f7fe6c0 (LWP 259355)]
+[New Thread 0x7ffe5dffb6c0 (LWP 259356)]
+[New Thread 0x7ffe5effd6c0 (LWP 259357)]
+[New Thread 0x7ffe5cff96c0 (LWP 259358)]
+[New Thread 0x7ffe5e7fc6c0 (LWP 259359)]
+[New Thread 0x7ffe5d7fa6c0 (LWP 259360)]
+[New Thread 0x7ffe57fff6c0 (LWP 259361)]
+[New Thread 0x7ffe577fe6c0 (LWP 259362)]
+[New Thread 0x7ffe56ffd6c0 (LWP 259363)]
+[Thread 0x7ffe65ffb6c0 (LWP 259022) exited]
+[Thread 0x7ffe70ff96c0 (LWP 259019) exited]
+[Thread 0x7ffe66ffd6c0 (LWP 259020) exited]
+[Thread 0x7ffe67fff6c0 (LWP 259021) exited]
+[Thread 0x7ffe677fe6c0 (LWP 259023) exited]
+[Thread 0x7ffe667fc6c0 (LWP 259024) exited]
+[Thread 0x7ffe657fa6c0 (LWP 259025) exited]
+[Thread 0x7ffe64ff96c0 (LWP 259026) exited]
+[Thread 0x7ffe5ffff6c0 (LWP 259027) exited]
+[New Thread 0x7ffe5ffff6c0 (LWP 259364)]
+[Thread 0x7ffe5ffff6c0 (LWP 259364) exited]
+[New Thread 0x7ffe5ffff6c0 (LWP 259365)]
+[New Thread 0x7ffe64ff96c0 (LWP 259366)]
+[New Thread 0x7ffe657fa6c0 (LWP 259367)]
+[New Thread 0x7ffe667fc6c0 (LWP 259368)]
+[New Thread 0x7ffe70ff96c0 (LWP 259369)]
+[New Thread 0x7ffe67fff6c0 (LWP 259370)]
+[New Thread 0x7ffe677fe6c0 (LWP 259371)]
+[New Thread 0x7ffe66ffd6c0 (LWP 259372)]
+[New Thread 0x7ffe65ffb6c0 (LWP 259373)]
+[New Thread 0x7ffe567fc6c0 (LWP 259374)]
+[New Thread 0x7ffe55ffb6c0 (LWP 259375)]
+[New Thread 0x7ffe557fa6c0 (LWP 259376)]
+[New Thread 0x7ffe54ff96c0 (LWP 259377)]
+[New Thread 0x7ffe4bfff6c0 (LWP 259378)]
+[New Thread 0x7ffe4b7fe6c0 (LWP 259379)]
+[New Thread 0x7ffe4affd6c0 (LWP 259380)]
+[New Thread 0x7ffe4a7fc6c0 (LWP 259381)]
+[New Thread 0x7ffe49ffb6c0 (LWP 259382)]
+[Thread 0x7ffe557fa6c0 (LWP 259376) exited]
+[Thread 0x7ffe4bfff6c0 (LWP 259378) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 14.74s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/20261002_160830_r0_a25_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/20261002_160830_r0_a25.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/20261002_160830_r0_a25.ply  (frame 45)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/imu_a25.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a25/scan_info.txt
+Received message: S0-05.0
+
+Iteration 6
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/20261002_160830_r0_a-5.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/20261002_160830_r0_a-5_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/20261002_160830_r0_a-5.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/imu_a-5.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.705m Holes: 99871     frames:      5  fps:   4.2  depth:  0.705m Holes: 99871     frames:     10  fps:   6.2  depth:  0.705m Holes: 99871     frames:     15  fps:   7.5  depth:  0.705m Holes: 99920     frames:     20  fps:   8.4  depth:  0.705m Holes: 100188     frames:     25  fps:   9.0  depth:  0.706m Holes: 100075     frames:     30  fps:   9.4  depth:  0.705m Holes: 100232     frames:     35  fps:   9.7  depth:  0.705m Holes: 100265     frames:     40  fps:  10.0  depth:  0.706m Holes: 100374     frames:     45  fps:  10.1  depth:  0.706m Holes: 100261     frames:     50  fps:   9.6  depth:  0.705m Holes: 100229     frames:     55  fps:   9.2  depth:  0.706m Holes: 100070     frames:     60  fps:   8.8  depth:  0.706m Holes: 100342     frames:     65  fps:   8.6  depth:  0.706m Holes: 100064     frames:     70  fps:   8.4  depth:  0.706m Holes: 100088     frames:     75  fps:   8.3  depth:  0.706m Holes: 100243     frames:     80  fps:   8.5  depth:  0.705m Holes: 100571     frames:     85  fps:   8.7  depth:  0.705m Holes: 100138     [Thread 0x7ffe49ffb6c0 (LWP 259382) exited]
+[Thread 0x7ffe4a7fc6c0 (LWP 259381) exited]
+[Thread 0x7ffe4affd6c0 (LWP 259380) exited]
+[Thread 0x7ffe4b7fe6c0 (LWP 259379) exited]
+[Thread 0x7ffe55ffb6c0 (LWP 259375) exited]
+[Thread 0x7ffe54ff96c0 (LWP 259377) exited]
+[Thread 0x7ffe567fc6c0 (LWP 259374) exited]
+[New Thread 0x7ffe567fc6c0 (LWP 259626)]
+[Thread 0x7ffe567fc6c0 (LWP 259626) exited]
+[New Thread 0x7ffe567fc6c0 (LWP 259627)]
+[New Thread 0x7ffe54ff96c0 (LWP 259628)]
+[New Thread 0x7ffe55ffb6c0 (LWP 259629)]
+[New Thread 0x7ffe4b7fe6c0 (LWP 259630)]
+[New Thread 0x7ffe557fa6c0 (LWP 259631)]
+[New Thread 0x7ffe4bfff6c0 (LWP 259632)]
+[New Thread 0x7ffe4affd6c0 (LWP 259633)]
+[New Thread 0x7ffe4a7fc6c0 (LWP 259634)]
+[New Thread 0x7ffe49ffb6c0 (LWP 259635)]
+[Thread 0x7ffe5cff96c0 (LWP 259358) exited]
+[Thread 0x7ffe5f7fe6c0 (LWP 259355) exited]
+[Thread 0x7ffe5effd6c0 (LWP 259357) exited]
+[Thread 0x7ffe5dffb6c0 (LWP 259356) exited]
+[Thread 0x7ffe5e7fc6c0 (LWP 259359) exited]
+[Thread 0x7ffe5d7fa6c0 (LWP 259360) exited]
+[Thread 0x7ffe57fff6c0 (LWP 259361) exited]
+[Thread 0x7ffe577fe6c0 (LWP 259362) exited]
+[Thread 0x7ffe56ffd6c0 (LWP 259363) exited]
+[New Thread 0x7ffe56ffd6c0 (LWP 259637)]
+[Thread 0x7ffe56ffd6c0 (LWP 259637) exited]
+[New Thread 0x7ffe56ffd6c0 (LWP 259639)]
+[New Thread 0x7ffe577fe6c0 (LWP 259640)]
+[New Thread 0x7ffe57fff6c0 (LWP 259641)]
+[New Thread 0x7ffe5d7fa6c0 (LWP 259642)]
+[New Thread 0x7ffe5f7fe6c0 (LWP 259643)]
+[New Thread 0x7ffe5effd6c0 (LWP 259644)]
+[New Thread 0x7ffe5e7fc6c0 (LWP 259645)]
+[New Thread 0x7ffe5dffb6c0 (LWP 259646)]
+[New Thread 0x7ffe5cff96c0 (LWP 259647)]
+[New Thread 0x7ffe497fa6c0 (LWP 259648)]
+[New Thread 0x7ffe48ff96c0 (LWP 259649)]
+[New Thread 0x7ffe3ffff6c0 (LWP 259650)]
+[New Thread 0x7ffe3f7fe6c0 (LWP 259651)]
+[New Thread 0x7ffe3effd6c0 (LWP 259652)]
+[New Thread 0x7ffe3e7fc6c0 (LWP 259653)]
+[New Thread 0x7ffe3dffb6c0 (LWP 259654)]
+[New Thread 0x7ffe3d7fa6c0 (LWP 259655)]
+[New Thread 0x7ffe3cff96c0 (LWP 259656)]
+[Thread 0x7ffe3ffff6c0 (LWP 259650) exited]
+[Thread 0x7ffe3effd6c0 (LWP 259652) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 12.66s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/20261002_160830_r0_a-5_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/20261002_160830_r0_a-5.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/20261002_160830_r0_a-5.ply  (frame 83)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/imu_a-5.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-5/scan_info.txt
+Received message: S0-10.0
+
+Iteration 7
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/20261002_160830_r0_a-10.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/20261002_160830_r0_a-10_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/20261002_160830_r0_a-10.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/imu_a-10.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.713m Holes: 100110     frames:      5  fps:   3.0  depth:  0.713m Holes: 100025     frames:     10  fps:   4.1  depth:  0.713m Holes: 100209     frames:     15  fps:   4.7  depth:  0.713m Holes: 100082     frames:     20  fps:   5.5  depth:  0.713m Holes: 100232     frames:     25  fps:   6.2  depth:  0.713m Holes: 100276     frames:     30  fps:   6.8  depth:  0.713m Holes: 99974     frames:     35  fps:   7.3  depth:  0.713m Holes: 99642     frames:     40  fps:   7.7  depth:  0.713m Holes: 99903     frames:     45  fps:   8.1  depth:  0.713m Holes: 100217     frames:     50  fps:   8.4  depth:  0.713m Holes: 100424     frames:     55  fps:   8.6  depth:  0.713m Holes: 99932     frames:     60  fps:   8.9  depth:  0.713m Holes: 100205     frames:     65  fps:   9.1  depth:  0.713m Holes: 100166     frames:     70  fps:   9.3  depth:  0.713m Holes: 100158     frames:     75  fps:   9.1  depth:  0.713m Holes: 100345     frames:     80  fps:   8.9  depth:  0.713m Holes: 100236     frames:     85  fps:   8.7  depth:  0.713m Holes: 99981     [Thread 0x7ffe3cff96c0 (LWP 259656) exited]
+[Thread 0x7ffe3d7fa6c0 (LWP 259655) exited]
+[Thread 0x7ffe3dffb6c0 (LWP 259654) exited]
+[Thread 0x7ffe3e7fc6c0 (LWP 259653) exited]
+[Thread 0x7ffe48ff96c0 (LWP 259649) exited]
+[Thread 0x7ffe3f7fe6c0 (LWP 259651) exited]
+[Thread 0x7ffe497fa6c0 (LWP 259648) exited]
+[New Thread 0x7ffe497fa6c0 (LWP 259961)]
+[Thread 0x7ffe497fa6c0 (LWP 259961) exited]
+[New Thread 0x7ffe497fa6c0 (LWP 259962)]
+[New Thread 0x7ffe3f7fe6c0 (LWP 259963)]
+[New Thread 0x7ffe48ff96c0 (LWP 259964)]
+[New Thread 0x7ffe3e7fc6c0 (LWP 259965)]
+[New Thread 0x7ffe3ffff6c0 (LWP 259966)]
+[New Thread 0x7ffe3effd6c0 (LWP 259967)]
+[New Thread 0x7ffe3dffb6c0 (LWP 259968)]
+[New Thread 0x7ffe3d7fa6c0 (LWP 259969)]
+[New Thread 0x7ffe3cff96c0 (LWP 259970)]
+[Thread 0x7ffe4b7fe6c0 (LWP 259630) exited]
+[Thread 0x7ffe54ff96c0 (LWP 259628) exited]
+[Thread 0x7ffe567fc6c0 (LWP 259627) exited]
+[Thread 0x7ffe55ffb6c0 (LWP 259629) exited]
+[Thread 0x7ffe557fa6c0 (LWP 259631) exited]
+[Thread 0x7ffe4affd6c0 (LWP 259633) exited]
+[Thread 0x7ffe4bfff6c0 (LWP 259632) exited]
+[Thread 0x7ffe4a7fc6c0 (LWP 259634) exited]
+[Thread 0x7ffe49ffb6c0 (LWP 259635) exited]
+[New Thread 0x7ffe49ffb6c0 (LWP 259971)]
+[Thread 0x7ffe49ffb6c0 (LWP 259971) exited]
+[New Thread 0x7ffe49ffb6c0 (LWP 259972)]
+[New Thread 0x7ffe4a7fc6c0 (LWP 259973)]
+[New Thread 0x7ffe4affd6c0 (LWP 259974)]
+[New Thread 0x7ffe4bfff6c0 (LWP 259975)]
+[New Thread 0x7ffe567fc6c0 (LWP 259976)]
+[New Thread 0x7ffe55ffb6c0 (LWP 259977)]
+[New Thread 0x7ffe557fa6c0 (LWP 259978)]
+[New Thread 0x7ffe54ff96c0 (LWP 259979)]
+[New Thread 0x7ffe4b7fe6c0 (LWP 259980)]
+[New Thread 0x7ffe33fff6c0 (LWP 259981)]
+[New Thread 0x7ffe337fe6c0 (LWP 259982)]
+[New Thread 0x7ffe32ffd6c0 (LWP 259983)]
+[New Thread 0x7ffe327fc6c0 (LWP 259984)]
+[New Thread 0x7ffe31ffb6c0 (LWP 259985)]
+[New Thread 0x7ffe317fa6c0 (LWP 259986)]
+[New Thread 0x7ffe30ff96c0 (LWP 259987)]
+[New Thread 0x7ffe2bfff6c0 (LWP 259988)]
+[New Thread 0x7ffe2b7fe6c0 (LWP 259989)]
+[Thread 0x7ffe32ffd6c0 (LWP 259983) exited]
+[Thread 0x7ffe31ffb6c0 (LWP 259985) exited]
+
+------------------------------------------------------------
+Frames  : 90
+Duration: 14.70s
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/20261002_160830_r0_a-10_detections.csv
+Bag     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/20261002_160830_r0_a-10.db3
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/20261002_160830_r0_a-10.ply  (frame 86)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/imu_a-10.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-10/scan_info.txt
+Received message: S0-15.0
+
+Iteration 8
+Session : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-15
+Detecting AprilTag 36h11 — ALL tags
+Streams : Depth + Color 1280x720@30 | Accel | Gyro
+Depth   : preset high_density, units 0.00 m
+Record  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-15/20261002_160830_r0_a-15.db3
+CSV     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-15/20261002_160830_r0_a-15_detections.csv
+PLY     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-15/20261002_160830_r0_a-15.ply  (best frame — least holes, frames 45:89)
+IMU     : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-15/imu_a-15.csv
+Config  : /run/media/joab/Seagate/roughness/Joab_Characterisation/Debug_segfault/20261002_160830/20261002_160830_r0/20261002_160830_r0_a-15/scan_info.txt
+Frames  : 90
+------------------------------------------------------------
+frames:      0  fps:   0.0  depth:  0.726m Holes: 102055     
+Thread 131 "rs_marker" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7ffe87fff6c0 (LWP 258429)]
+0x000000c3000001b6 in ?? ()
+
+Thread 292 (Thread 0x7ffe2b7fe6c0 (LWP 259989) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04fae28 in select () at /lib64/libc.so.6
+#4  0x00007ffff7a51e32 in librealsense::platform::iio_hid_sensor::start_capture(std::function<void (librealsense::platform::sensor_data const&)>)::{lambda()#1}::operator()() const [clone .lto_priv.0] () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 291 (Thread 0x7ffe2bfff6c0 (LWP 259988) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04fae28 in select () at /lib64/libc.so.6
+#4  0x00007ffff7a51e32 in librealsense::platform::iio_hid_sensor::start_capture(std::function<void (librealsense::platform::sensor_data const&)>)::{lambda()#1}::operator()() const [clone .lto_priv.0] () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 290 (Thread 0x7ffe30ff96c0 (LWP 259987) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04fae28 in select () at /lib64/libc.so.6
+#4  0x00007ffff7a417f9 in librealsense::platform::v4l_uvc_device::poll() () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7a4b8c8 in librealsense::platform::v4l_uvc_device::capture_loop() () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 289 (Thread 0x7ffe317fa6c0 (LWP 259986) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04fae28 in select () at /lib64/libc.so.6
+#4  0x00007ffff7a417f9 in librealsense::platform::v4l_uvc_device::poll() () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7a4b8c8 in librealsense::platform::v4l_uvc_device::capture_loop() () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 287 (Thread 0x7ffe327fc6c0 (LWP 259984) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 285 (Thread 0x7ffe337fe6c0 (LWP 259982) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 284 (Thread 0x7ffe33fff6c0 (LWP 259981) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 283 (Thread 0x7ffe4b7fe6c0 (LWP 259980) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 282 (Thread 0x7ffe54ff96c0 (LWP 259979) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 281 (Thread 0x7ffe557fa6c0 (LWP 259978) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 280 (Thread 0x7ffe55ffb6c0 (LWP 259977) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 279 (Thread 0x7ffe567fc6c0 (LWP 259976) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff79115a9 in librealsense::ds_thermal_monitor::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 278 (Thread 0x7ffe4bfff6c0 (LWP 259975) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 277 (Thread 0x7ffe4affd6c0 (LWP 259974) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 276 (Thread 0x7ffe4a7fc6c0 (LWP 259973) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 275 (Thread 0x7ffe49ffb6c0 (LWP 259972) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff04c5c82 in clock_nanosleep@GLIBC_2.2.5 () at /lib64/libc.so.6
+#3  0x00007ffff04d1f37 in nanosleep () at /lib64/libc.so.6
+#4  0x00007ffff77a64cb in librealsense::platform::retry_controls_work_around::get_xu(librealsense::platform::extension_unit const&, unsigned char, unsigned char*, int) const () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7b3105a in librealsense::command_transfer_over_xu::send_receive(unsigned char const*, unsigned long, int, bool)::{lambda(librealsense::platform::uvc_device&)#1}::operator()(librealsense::platform::uvc_device&) const () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff7b340ad in librealsense::command_transfer_over_xu::send_receive(unsigned char const*, unsigned long, int, bool) () at /lib64/librealsense2.so.2.57
+#7  0x00007ffff7aa38c9 in librealsense::locked_transfer::send_receive(unsigned char const*, unsigned long, int, bool) [clone .constprop.0] () at /lib64/librealsense2.so.2.57
+#8  0x00007ffff7aa3a32 in librealsense::hw_monitor::execute_usb_command(unsigned char const*, unsigned long, unsigned int&, unsigned char*, unsigned long&, bool) const () at /lib64/librealsense2.so.2.57
+#9  0x00007ffff7aa3b2e in librealsense::hw_monitor::send_hw_monitor_command(librealsense::hw_monitor::hwmon_cmd_details&) const () at /lib64/librealsense2.so.2.57
+#10 0x00007ffff7aa3cb7 in librealsense::hw_monitor::send(librealsense::command const&, int*, bool) const () at /lib64/librealsense2.so.2.57
+#11 0x00007ffff77d53e7 in librealsense::d400_device::get_device_time_ms() () at /lib64/librealsense2.so.2.57
+#12 0x00007ffff7a9cc9f in librealsense::time_diff_keeper::update_diff_time() () at /lib64/librealsense2.so.2.57
+#13 0x00007ffff7a9ce63 in librealsense::time_diff_keeper::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#14 0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#15 0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#16 0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#17 0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#18 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 273 (Thread 0x7ffe3cff96c0 (LWP 259970) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 272 (Thread 0x7ffe3d7fa6c0 (LWP 259969) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 271 (Thread 0x7ffe3dffb6c0 (LWP 259968) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 270 (Thread 0x7ffe3effd6c0 (LWP 259967) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 269 (Thread 0x7ffe3ffff6c0 (LWP 259966) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 268 (Thread 0x7ffe3e7fc6c0 (LWP 259965) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 267 (Thread 0x7ffe48ff96c0 (LWP 259964) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 266 (Thread 0x7ffe3f7fe6c0 (LWP 259963) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 265 (Thread 0x7ffe497fa6c0 (LWP 259962) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 254 (Thread 0x7ffe5cff96c0 (LWP 259647) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 253 (Thread 0x7ffe5dffb6c0 (LWP 259646) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 252 (Thread 0x7ffe5e7fc6c0 (LWP 259645) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 251 (Thread 0x7ffe5effd6c0 (LWP 259644) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 250 (Thread 0x7ffe5f7fe6c0 (LWP 259643) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 249 (Thread 0x7ffe5d7fa6c0 (LWP 259642) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 248 (Thread 0x7ffe57fff6c0 (LWP 259641) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 247 (Thread 0x7ffe577fe6c0 (LWP 259640) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 246 (Thread 0x7ffe56ffd6c0 (LWP 259639) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 225 (Thread 0x7ffe65ffb6c0 (LWP 259373) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 224 (Thread 0x7ffe66ffd6c0 (LWP 259372) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 223 (Thread 0x7ffe677fe6c0 (LWP 259371) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 222 (Thread 0x7ffe67fff6c0 (LWP 259370) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 221 (Thread 0x7ffe70ff96c0 (LWP 259369) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 220 (Thread 0x7ffe667fc6c0 (LWP 259368) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 219 (Thread 0x7ffe657fa6c0 (LWP 259367) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 218 (Thread 0x7ffe64ff96c0 (LWP 259366) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 217 (Thread 0x7ffe5ffff6c0 (LWP 259365) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 196 (Thread 0x7ffe72ffd6c0 (LWP 259037) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 195 (Thread 0x7ffe73fff6c0 (LWP 259036) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 194 (Thread 0x7ffe78ff96c0 (LWP 259035) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 193 (Thread 0x7ffe797fa6c0 (LWP 259034) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 192 (Thread 0x7ffe79ffb6c0 (LWP 259033) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 191 (Thread 0x7ffe737fe6c0 (LWP 259032) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 190 (Thread 0x7ffe727fc6c0 (LWP 259031) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 189 (Thread 0x7ffe71ffb6c0 (LWP 259030) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 188 (Thread 0x7ffe717fa6c0 (LWP 259029) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 167 (Thread 0x7ffe7bfff6c0 (LWP 258704) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 166 (Thread 0x7ffe857fa6c0 (LWP 258703) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 165 (Thread 0x7ffe85ffb6c0 (LWP 258702) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 164 (Thread 0x7ffe867fc6c0 (LWP 258701) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 163 (Thread 0x7ffe86ffd6c0 (LWP 258700) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 162 (Thread 0x7ffe84ff96c0 (LWP 258699) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 161 (Thread 0x7ffe7b7fe6c0 (LWP 258698) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 160 (Thread 0x7ffe7affd6c0 (LWP 258697) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 159 (Thread 0x7ffe7a7fc6c0 (LWP 258696) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 138 (Thread 0x7ffe9d7fa6c0 (LWP 258436) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 137 (Thread 0x7ffe9e7fc6c0 (LWP 258435) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 136 (Thread 0x7ffe9effd6c0 (LWP 258434) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 135 (Thread 0x7ffe9f7fe6c0 (LWP 258433) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 134 (Thread 0x7ffea4ef76c0 (LWP 258432) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 133 (Thread 0x7ffe9dffb6c0 (LWP 258431) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 132 (Thread 0x7ffe9cff96c0 (LWP 258430) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 131 (Thread 0x7ffe87fff6c0 (LWP 258429) "rs_marker"):
+#0  0x000000c3000001b6 in ??? ()
+#1  0x00007ffff791ea49 in std::_Function_handler<void (rs2_notification*), librealsense::record_sensor::register_notifications_callback(std::shared_ptr<rs2_notifications_callback>)::{lambda(rs2_notification*)#1}>::_M_invoke(std::_Any_data const&, rs2_notification*&&) () at /lib64/librealsense2.so.2.57
+#2  0x00007ffff7acbfae in std::_Function_handler<void (dispatcher::cancellable_timer), librealsense::notifications_processor::raise_notification(librealsense::notification)::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) [clone .lto_priv.0] () at /lib64/librealsense2.so.2.57
+#3  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#4  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#5  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#6  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 130 (Thread 0x7ffe877fe6c0 (LWP 258428) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 109 (Thread 0x7fff311e56c0 (LWP 258087) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 108 (Thread 0x7fff319e66c0 (LWP 258086) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 107 (Thread 0x7fff329e86c0 (LWP 258085) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 106 (Thread 0x7fff339ea6c0 (LWP 258084) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 105 (Thread 0x7fff341eb6c0 (LWP 258083) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 104 (Thread 0x7fff23fff6c0 (LWP 258082) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 103 (Thread 0x7fff237fe6c0 (LWP 258081) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 102 (Thread 0x7fff22ffd6c0 (LWP 258080) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 101 (Thread 0x7ffea56f86c0 (LWP 258079) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 80 (Thread 0x7fff3b1f96c0 (LWP 257764) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 79 (Thread 0x7fff3b9fa6c0 (LWP 257763) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 78 (Thread 0x7fff3c1fb6c0 (LWP 257762) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 77 (Thread 0x7fff3c9fc6c0 (LWP 257761) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 76 (Thread 0x7fff3d1fd6c0 (LWP 257760) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 75 (Thread 0x7fff3a9f86c0 (LWP 257759) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 74 (Thread 0x7fff3a1f76c0 (LWP 257758) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 73 (Thread 0x7fff399f66c0 (LWP 257757) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 72 (Thread 0x7fff391f56c0 (LWP 257756) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 60 (Thread 0x7ffea6ffd6c0 (LWP 257575) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 59 (Thread 0x7ffea77fe6c0 (LWP 257570) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 58 (Thread 0x7ffea7fff6c0 (LWP 257569) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 57 (Thread 0x7ffe9ffff6c0 (LWP 257568) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 56 (Thread 0x7ffeb8ffc6c0 (LWP 257567) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 55 (Thread 0x7ffeb97fd6c0 (LWP 257566) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 54 (Thread 0x7ffeb9ffe6c0 (LWP 257564) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 53 (Thread 0x7ffeba7ff6c0 (LWP 257563) "Thread (pooled)"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff0479302 in pthread_cond_timedwait@@GLIBC_2.3.2 () at /lib64/libc.so.6
+#4  0x00007fffee51028e in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib64/libQt6Core.so.6
+#5  0x00007fffee44ff02 in QThreadPoolThread::run() () at /lib64/libQt6Core.so.6
+#6  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 52 (Thread 0x7ffec15fe6c0 (LWP 257562) "WaylandEventThr"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04efe3e in poll () at /lib64/libc.so.6
+#4  0x00007fff21f4443b in QtWaylandClient::EventThread::run() () at /lib64/libQt6WaylandClient.so.6
+#5  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 51 (Thread 0x7ffec1dff6c0 (LWP 257561) "WaylandEventThr"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04efe3e in poll () at /lib64/libc.so.6
+#4  0x00007fff21f4443b in QtWaylandClient::EventThread::run() () at /lib64/libQt6WaylandClient.so.6
+#5  0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 50 (Thread 0x7ffefa3f86c0 (LWP 257560) "QDBusConnection"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04f0466 in ppoll () at /lib64/libc.so.6
+#4  0x00007ffff017a125 in g_main_context_iterate_unlocked.isra () at /lib64/libglib-2.0.so.0
+#5  0x00007ffff017a1e3 in g_main_context_iteration () at /lib64/libglib-2.0.so.0
+#6  0x00007fffee65defd in QEventDispatcherGlib::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib64/libQt6Core.so.6
+#7  0x00007fffee31a78b in QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib64/libQt6Core.so.6
+#8  0x00007fffee44b34a in QThread::exec() () at /lib64/libQt6Core.so.6
+#9  0x00007fffe533e5c4 in QDBusConnectionManager::run() () at /lib64/libQt6DBus.so.6
+#10 0x00007fffee50788f in QThreadPrivate::start(void*) () at /lib64/libQt6Core.so.6
+#11 0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#12 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 49 (Thread 0x7ffefa7f96c0 (LWP 257559) "rs_marker"):
+#0  0x00007ffff0cc3652 in cv::hal::opt_AVX2::normHamming(unsigned char const*, unsigned char const*, int) () at /lib64/libopencv_core.so.413
+#1  0x00007ffff0c6d3ce in cv::hal::normHamming(unsigned char const*, unsigned char const*, int) () at /lib64/libopencv_core.so.413
+#2  0x00007ffff658341e in cv::aruco::Dictionary::identify(cv::Mat const&, int&, int&, double) const () at /lib64/libopencv_objdetect.so.413
+#3  0x00007ffff6573aae in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#4  0x00007ffff6576a6e in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#5  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#6  0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#7  0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#8  0x00007ffff09cfbf3 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#9  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#10 0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#11 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 48 (Thread 0x7ffefabfa6c0 (LWP 257558) "rs_marker"):
+#0  0x00007ffff04fb3bd in syscall () at /lib64/libc.so.6
+#1  0x00007ffff09cdbac in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#2  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#3  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 47 (Thread 0x7ffefaffb6c0 (LWP 257557) "rs_marker"):
+#0  0x00007ffff04fb3bd in syscall () at /lib64/libc.so.6
+#1  0x00007ffff09cdbac in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#2  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#3  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 46 (Thread 0x7ffefb3fc6c0 (LWP 257556) "rs_marker"):
+#0  0x00007ffff04e40eb in sched_yield () at /lib64/libc.so.6
+#1  0x00007ffff09d0415 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#2  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#3  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#4  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 45 (Thread 0x7ffefb7fd6c0 (LWP 257555) "rs_marker"):
+#0  0x00007ffff09b4242 in tbb::detail::r1::task_dispatcher::steal_or_get_critical(tbb::detail::r1::execution_data_ext&, tbb::detail::r1::arena&, unsigned int, tbb::detail::r1::FastRandom&, long, bool) () at /lib64/libtbb.so.12
+#1  0x00007ffff09d03b6 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#2  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#3  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#4  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 44 (Thread 0x7ffefbfff6c0 (LWP 257553) "rs_marker"):
+#0  0x00007ffff09cff2a in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#1  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#2  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#3  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 43 (Thread 0x7fff205ac6c0 (LWP 257552) "rs_marker"):
+#0  0x00007ffff0b47740 in cv::Mat::Mat(cv::Mat const&) () at /lib64/libopencv_core.so.413
+#1  0x00007ffff0aa9f6d in cv::countNonZero(cv::_InputArray const&) () at /lib64/libopencv_core.so.413
+#2  0x00007ffff656d5e3 in cv::aruco::_extractBits(cv::_InputArray const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int, int, int, double, double, cv::_OutputArray const&) [clone .constprop.0] () at /lib64/libopencv_objdetect.so.413
+#3  0x00007ffff657377d in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#4  0x00007ffff6576a6e in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#5  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#6  0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#7  0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#8  0x00007ffff09cfbf3 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#9  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#10 0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#11 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 42 (Thread 0x7ffefbbfe6c0 (LWP 257554) "rs_marker"):
+#0  0x00007ffff09cff2a in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#1  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#2  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#3  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 41 (Thread 0x7fff20dae6c0 (LWP 257550) "rs_marker"):
+#0  0x00007ffff09cff2a in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#1  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#2  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#3  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 40 (Thread 0x7fff209ad6c0 (LWP 257551) "rs_marker"):
+#0  0x00007ffff04e40eb in sched_yield () at /lib64/libc.so.6
+#1  0x00007ffff09d0415 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#2  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#3  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#4  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 39 (Thread 0x7fff215b06c0 (LWP 257548) "rs_marker"):
+#0  0x00007ffff0cc35d0 in cv::hal::opt_AVX2::normHamming(unsigned char const*, unsigned char const*, int) () at /lib64/libopencv_core.so.413
+#1  0x00007ffff0c6d3ce in cv::hal::normHamming(unsigned char const*, unsigned char const*, int) () at /lib64/libopencv_core.so.413
+#2  0x00007ffff658341e in cv::aruco::Dictionary::identify(cv::Mat const&, int&, int&, double) const () at /lib64/libopencv_objdetect.so.413
+#3  0x00007ffff6573aae in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#4  0x00007ffff65766d9 in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#5  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#6  0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#7  0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#8  0x00007ffff09cfbf3 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#9  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#10 0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#11 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 38 (Thread 0x7fff211af6c0 (LWP 257549) "rs_marker"):
+#0  0x00007ffff0bb6080 in cv::meanStdDev(cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_InputArray const&) () at /lib64/libopencv_core.so.413
+#1  0x00007ffff656d2cf in cv::aruco::_extractBits(cv::_InputArray const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int, int, int, double, double, cv::_OutputArray const&) [clone .constprop.0] () at /lib64/libopencv_objdetect.so.413
+#2  0x00007ffff657377d in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#3  0x00007ffff65766d9 in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#4  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#5  0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#6  0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#7  0x00007ffff09cfbf3 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#8  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#9  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#10 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 37 (Thread 0x7fff331e96c0 (LWP 257546) "rs_marker"):
+#0  0x00007ffff11b4f6e in void cv::remapNearest<unsigned char, false>(cv::Mat const&, cv::Mat&, cv::Mat const&, int, cv::Scalar_<double> const&, cv::Point_<int> const&) [clone .lto_priv.0] () at /lib64/libopencv_imgproc.so.413
+#1  0x00007ffff11a884a in cv::RemapInvoker::operator()(cv::Range const&) const () at /lib64/libopencv_imgproc.so.413
+#2  0x00007ffff11ac58f in cv::remap(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::_InputArray const&, int, int, cv::Scalar_<double> const&) () at /lib64/libopencv_imgproc.so.413
+#3  0x00007ffff11b1941 in cv::WarpPerspectiveInvoker::operator()(cv::Range const&) const () at /lib64/libopencv_imgproc.so.413
+#4  0x00007ffff11b002c in cv::hal::warpPerspective(int, unsigned char const*, unsigned long, int, int, unsigned char*, unsigned long, int, int, double const*, int, int, double const*) () at /lib64/libopencv_imgproc.so.413
+#5  0x00007ffff11b1db7 in cv::warpPerspective(cv::_InputArray const&, cv::_OutputArray const&, cv::_InputArray const&, cv::Size_<int>, int, int, cv::Scalar_<double> const&) () at /lib64/libopencv_imgproc.so.413
+#6  0x00007ffff656d15f in cv::aruco::_extractBits(cv::_InputArray const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int, int, int, double, double, cv::_OutputArray const&) [clone .constprop.0] () at /lib64/libopencv_objdetect.so.413
+#7  0x00007ffff657377d in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#8  0x00007ffff65766d9 in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#9  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#10 0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#11 0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#12 0x00007ffff09cfbf3 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#13 0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#14 0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#15 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 36 (Thread 0x7fff219b16c0 (LWP 257547) "rs_marker"):
+#0  0x00007ffff0b986f3 in cv::_InputArray::empty() const () at /lib64/libopencv_core.so.413
+#1  0x00007ffff0bb5aeb in cv::meanStdDev(cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_InputArray const&) () at /lib64/libopencv_core.so.413
+#2  0x00007ffff656d2cf in cv::aruco::_extractBits(cv::_InputArray const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int, int, int, double, double, cv::_OutputArray const&) [clone .constprop.0] () at /lib64/libopencv_objdetect.so.413
+#3  0x00007ffff657377d in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#4  0x00007ffff65766d9 in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#5  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#6  0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#7  0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#8  0x00007ffff09cfbf3 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#9  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#10 0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#11 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 35 (Thread 0x7fff321e76c0 (LWP 257545) "rs_marker"):
+#0  0x00007ffff0c6d3a7 in cv::hal::normHamming(unsigned char const*, unsigned char const*, int) () at /lib64/libopencv_core.so.413
+#1  0x00007ffff658341e in cv::aruco::Dictionary::identify(cv::Mat const&, int&, int&, double) const () at /lib64/libopencv_objdetect.so.413
+#2  0x00007ffff6573aae in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#3  0x00007ffff65766d9 in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#4  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#5  0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#6  0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#7  0x00007ffff09cfbf3 in tbb::detail::r1::thread_dispatcher::process(rml::job&) () at /lib64/libtbb.so.12
+#8  0x00007ffff09cd973 in tbb::detail::r1::rml::private_worker::thread_routine(void*) () at /lib64/libtbb.so.12
+#9  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#10 0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 25 (Thread 0x7fff349ec6c0 (LWP 257535) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 24 (Thread 0x7fff351ed6c0 (LWP 257534) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 23 (Thread 0x7fff359ee6c0 (LWP 257533) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 22 (Thread 0x7fff361ef6c0 (LWP 257532) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 21 (Thread 0x7fff369f06c0 (LWP 257531) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 20 (Thread 0x7fff371f16c0 (LWP 257530) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff7a9b529 in librealsense::polling_error_handler::polling(dispatcher::cancellable_timer) () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 19 (Thread 0x7fff379f26c0 (LWP 257529) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 18 (Thread 0x7fff381f36c0 (LWP 257528) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 17 (Thread 0x7fff389f46c0 (LWP 257527) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1691a6c in dispatcher::_wait_for_start(int) () at /lib64/librsutils.so.2.57
+#5  0x00007ffff16925ed in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#6  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#7  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#8  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 5 (Thread 0x7fff3d9fe6c0 (LWP 257448) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476897 in __futex_abstimed_wait_cancelable64 () at /lib64/libc.so.6
+#3  0x00007ffff047956c in pthread_cond_clockwait@GLIBC_2.30 () at /lib64/libc.so.6
+#4  0x00007ffff1692860 in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#5  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#6  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#7  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 2 (Thread 0x7fff3e1ff6c0 (LWP 257444) "rs_marker"):
+#0  0x00007ffff0482352 in __syscall_cancel_arch () at /lib64/libc.so.6
+#1  0x00007ffff047654c in __internal_syscall_cancel () at /lib64/libc.so.6
+#2  0x00007ffff0476594 in __syscall_cancel () at /lib64/libc.so.6
+#3  0x00007ffff04efe3e in poll () at /lib64/libc.so.6
+#4  0x00007ffff7a6e0c0 in librealsense::udev_device_watcher::udev_device_watcher(librealsense::platform::backend const*)::{lambda(dispatcher::cancellable_timer)#1}::operator()(dispatcher::cancellable_timer) const () at /lib64/librealsense2.so.2.57
+#5  0x00007ffff7910dcc in std::_Function_handler<void (dispatcher::cancellable_timer), active_object<std::function<void (dispatcher::cancellable_timer)> >::do_loop()::{lambda(dispatcher::cancellable_timer)#1}>::_M_invoke(std::_Any_data const&, dispatcher::cancellable_timer&&) () at /lib64/librealsense2.so.2.57
+#6  0x00007ffff16927af in dispatcher::dispatcher(unsigned int, std::function<void (std::function<void (dispatcher::cancellable_timer const&)>)>)::{lambda()#1}::operator()() const () at /lib64/librsutils.so.2.57
+#7  0x00007ffff0651476 in execute_native_thread_routine () at /lib64/libstdc++.so.6
+#8  0x00007ffff0479c42 in start_thread () at /lib64/libc.so.6
+#9  0x00007ffff04fd5ac in __clone3 () at /lib64/libc.so.6
+
+Thread 1 (Thread 0x7fffd0665a00 (LWP 257356) "rs_marker"):
+#0  0x00007ffff0c6b950 in cv::checkHardwareSupport(int) () at /lib64/libopencv_core.so.413
+#1  0x00007ffff0c6d3bc in cv::hal::normHamming(unsigned char const*, unsigned char const*, int) () at /lib64/libopencv_core.so.413
+#2  0x00007ffff658341e in cv::aruco::Dictionary::identify(cv::Mat const&, int&, int&, double) const () at /lib64/libopencv_objdetect.so.413
+#3  0x00007ffff6573aae in cv::aruco::_identifyOneCandidate(cv::aruco::Dictionary const&, cv::Mat const&, std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > const&, int&, cv::aruco::DetectorParameters const&, int&, float&, bool, float) [clone .lto_priv.0] () at /lib64/libopencv_objdetect.so.413
+#4  0x00007ffff65766d9 in std::_Function_handler<void (cv::Range const&), cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const::{lambda(cv::Range const&)#1}>::_M_invoke(std::_Any_data const&, cv::Range const&) () at /lib64/libopencv_objdetect.so.413
+#5  0x00007ffff0c1b1d5 in cv::(anonymous namespace)::ParallelLoopBodyWrapper::operator()(cv::Range const&) const () at /lib64/libopencv_core.so.413
+#6  0x00007ffff0c15a79 in cv::parallel_for_cb(int, int, void*) () at /lib64/libopencv_core.so.413
+#7  0x00007ffff0c2d4c4 in tbb::detail::d1::start_for<tbb::detail::d1::blocked_range<int>, cv::parallel::tbb::ParallelForBackend::CallbackProxy, tbb::detail::d1::auto_partitioner const>::execute(tbb::detail::d1::execution_data&) () at /lib64/libopencv_core.so.413
+#8  0x00007ffff09c8cd3 in tbb::detail::r1::task_dispatcher::execute_and_wait(tbb::detail::d1::task*, tbb::detail::d1::wait_context&, tbb::detail::d1::task_group_context&) () at /lib64/libtbb.so.12
+#9  0x00007ffff0c322a3 in tbb::detail::d1::task_arena_function<cv::parallel::tbb::ParallelForBackend::CallbackProxy, void>::operator()() const () at /lib64/libopencv_core.so.413
+#10 0x00007ffff09b7514 in tbb::detail::r1::task_arena_impl::execute(tbb::detail::d1::task_arena_base&, tbb::detail::d1::delegate_base&) () at /lib64/libtbb.so.12
+#11 0x00007ffff0c1af0e in cv::parallel_for_(cv::Range const&, cv::ParallelLoopBody const&, double) () at /lib64/libopencv_core.so.413
+#12 0x00007ffff656bd2f in cv::aruco::ArucoDetector::ArucoDetectorImpl::identifyCandidates(cv::Mat const&, std::vector<cv::Mat, std::allocator<cv::Mat> > const&, std::vector<cv::aruco::MarkerCandidateTree, std::allocator<cv::aruco::MarkerCandidateTree> >&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > >, std::allocator<std::vector<cv::Point_<int>, std::allocator<cv::Point_<int> > > > >&, std::vector<int, std::allocator<int> >&, cv::aruco::Dictionary const&, std::vector<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > >, std::allocator<std::vector<cv::Point_<float>, std::allocator<cv::Point_<float> > > > >&, std::vector<float, std::allocator<float> >&, bool) const () at /lib64/libopencv_objdetect.so.413
+#13 0x00007ffff6570b1f in cv::aruco::ArucoDetector::ArucoDetectorImpl::detectMarkers(cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::aruco::DictionaryMode) () at /lib64/libopencv_objdetect.so.413
+#14 0x00007ffff65744c0 in cv::aruco::ArucoDetector::detectMarkers(cv::_InputArray const&, cv::_OutputArray const&, cv::_OutputArray const&, cv::_OutputArray const&) const () at /lib64/libopencv_objdetect.so.413
+#15 0x000000000040d442 in operator() (__closure=__closure@entry=0x7fffffffc720, img=...) at programs/rs_marker/main.cpp:571
+#16 0x000000000040e55a in detect_all_markers (gray=..., expected_tags=expected_tags@entry=4, filtered_out=<optimized out>, filtered_out@entry=0x0) at programs/rs_marker/main.cpp:605
+#17 0x0000000000415358 in main (argc=<optimized out>, argv=<optimized out>) at programs/rs_marker/main.cpp:1141

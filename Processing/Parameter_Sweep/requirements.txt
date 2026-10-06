@@ -1,0 +1,9 @@
+# Tested with Python 3.13. Same versions as ../Evaluate plus pandas and tqdm:
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+open3d>=0.19
+numpy>=1.26
+scipy>=1.11
+sympy>=1.12
+matplotlib>=3.8
+pandas>=2.1
+tqdm>=4.66

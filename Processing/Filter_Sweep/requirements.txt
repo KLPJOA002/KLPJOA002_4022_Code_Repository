@@ -1,0 +1,12 @@
+# Tested with Python 3.13. python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Same as ../Evaluate (open3d, numpy, scipy, sympy, matplotlib) plus:
+pyrealsense2>=2.57
+open3d>=0.19
+numpy>=1.26
+scipy>=1.11
+sympy>=1.12
+matplotlib>=3.8
+pandas>=2.1
+pyarrow>=14
+pyyaml>=6
+tqdm>=4.66

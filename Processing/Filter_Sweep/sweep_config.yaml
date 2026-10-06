@@ -1,0 +1,155 @@
+# Filter-parameter sweep: everything you'd want to edit lives here.
+# Run with:  .venv/bin/python run_sweep.py --stage 1   (see README.md)
+#
+# Filter parameters are pyrealsense2 option values (librealsense units):
+#   spatial.magnitude     filter_magnitude, iterations      1..5
+#   spatial.alpha         filter_smooth_alpha               0.25..1
+#   spatial.delta         filter_smooth_delta (disparity)   1..50
+#   spatial.holes_fill    holes_fill: 0 off, 1 2px, 2 4px, 3 8px, 4 16px, 5 unlimited
+#   temporal.alpha        filter_smooth_alpha               0..1   (1 = no smoothing)
+#   temporal.delta        filter_smooth_delta (disparity)   1..100
+#   temporal.persistence  holes_fill (persistency index)    0..8
+#                         0 off, 1 valid in 8/8, 2 2/last 3, 3 2/last 4, 4 2/8, 5 1/last 2,
+#                         6 1/last 5, 7 1/last 8, 8 always
+#   hole_filling.mode     0 fill from left, 1 farthest from around, 2 nearest from around
+#   decimation.magnitude  2..8 (1 = off). Changes the depth resolution (see README)
+#   hdr_merge.enabled     needs HDR recordings (sequence metadata); skipped otherwise
+
+data_root: /run/media/joab/Seagate/roughness/Joab_Characterisation/3D_Error
+
+# Shape folders to process (case as on disk). Big_Pyramid / Small_Pyramid were not scanned.
+shapes: [Small_Wave, Big_Wave]
+# Height folders ("641mm", ...) to process, or "all".
+heights: all
+# Which of the 5 scans per (shape, height) to use, or "all". Ids: A1..A4 = session A in
+# rotation-label order r0, r45, r90, r135 (labels are wrong, all the same pose), B = session B R0 A0.
+scans: all
+
+# Ground truth per shape: mesh, mm, height field (top surface z = h(x, y)).
+# Small_Wave was matched to the "smaller" egg-carton (50 mm period, 30 mm peak-to-peak) by
+# evaluating real scans against every egg-carton mesh on disk (see README).
+references:
+  Small_Wave: ../Evaluate/References/Egg carton-smaller v1 (1).stl
+  Big_Wave:   ../Evaluate/References/EGG_1PK.stl
+
+out_dir: results          # relative to this file
+cache_dir: cache          # decoded frames, ~150 MB per scan (compressed)
+
+# Frame decoding. "cpp" uses decoder/build/rs_decode (system librealsense, matches rs_marker's
+# align bit for bit); "python" uses pyrealsense2 (its SSE align marks ~1.5% more pixels valid);
+# "auto" = cpp if built, else python with a warning.
+decoder: auto
+
+# Best-frame selection, as rs_marker: the frame with the most valid (non-zero) depth pixels
+# after filtering, among the frames rs_marker itself considered (its -b range in scan_info.txt,
+# e.g. 45:89), mapped onto the recording. Ties go to the earliest frame.
+# Temporal filter: frames are fed in recorded order from the first frame of the recording
+# (30 fps) - everything before the first candidate is warm-up (~3.5 s, 100+ frames here).
+# warmup_frames limits that to the N frames before the first candidate (null = all).
+warmup_frames: null
+
+# Point cloud of the selected frame. "rs_marker" reproduces rs_marker's .ply exactly (librealsense
+# 2.57 deprojection of the Inverse Brown-Conrady colour stream); "pyrealsense2" uses the installed
+# wheel's rs.pointcloud (2.58: same z, x/y up to 2.7% different towards the image corners).
+deprojection: rs_marker
+
+# Crop (../Crop automatic AprilTag crop, used as-is) and the steps around it
+crop_margin_px: 10        # as Parameter_Sweep
+crop_frame_window: 15     # cropper default
+# The tag square is ~500 mm wide around a 100 mm part, which lets Evaluate's search lock onto a
+# tilted pose. After the seed pose (Parameter_Sweep's seed_transform), points further than this
+# outside the reference's xy footprint are dropped before Evaluate (measured: Big_Wave coverage
+# 0.57 -> 0.99, z bias -10.3 -> -1.2 mm).
+part_trim_margin_mm: 30
+# Registration check (as Parameter_Sweep): status "suspect" if the aligned scan covers less than
+# this fraction of the reference. Applied when the table is assembled, not cached.
+min_covered_fraction: 0.85
+
+# Evaluate overrides (scan_eval.params.EvalParams)
+evaluate:
+  units: m
+  reference_units: mm
+  seed: 0
+  align: full
+  write_ply: false
+  write_overlay: false
+  write_plots: false
+
+# Parallelism
+workers: 12
+threads_per_worker: 1     # OpenMP / BLAS threads per worker (Open3D ICP)
+# Seconds per (scan, config) job, used for the runtime estimate until real timings exist.
+estimate_s_per_job: 17
+
+# Main metric for ranking and choosing what stage 2/3 build on (any Evaluate column).
+rank_metric: acc_rmse_mm
+
+# Parameter values used when a filter is ON but that parameter is not being swept
+# (librealsense defaults).
+filter_defaults:
+  decimation:   {magnitude: 2}
+  spatial:      {magnitude: 2, alpha: 0.5, delta: 20, holes_fill: 0}
+  temporal:     {alpha: 0.4, delta: 20, persistence: 3}
+  hole_filling: {mode: 1}
+  hdr_merge:    {enabled: true}
+
+# Every stage also runs the baseline (all filters off), once per scan.
+stages:
+  "1":
+    description: one factor at a time, every other filter off
+    kind: one_factor
+    factors:
+      decimation.magnitude:  [2, 3, 4, 5, 6, 8]
+      spatial.magnitude:     [1, 2, 3, 4, 5]
+      spatial.alpha:         [0.25, 0.35, 0.5, 0.65, 0.8, 1.0]
+      spatial.delta:         [1, 5, 10, 20, 35, 50]
+      spatial.holes_fill:    [0, 1, 2, 3, 4, 5]
+      temporal.alpha:        [0.05, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
+      temporal.delta:        [1, 5, 10, 20, 50, 100]
+      temporal.persistence:  [0, 1, 2, 3, 4, 5, 6, 7, 8]
+      hole_filling.mode:     [0, 1, 2]
+      hdr_merge.enabled:     [true]
+
+  "2":
+    description: full grid spatial x temporal (each axis includes "off")
+    kind: grid
+    # Held fixed: a number, "off", or "stage1_best" (best stage-1 value by rank_metric)
+    hold:
+      decimation.magnitude: 1
+      hole_filling.mode: off
+    include_off: true          # also spatial-only, temporal-only rows
+    # Sized for one night (~133 configs x 60 scans; ~8-9 h at ~17 s/job on 8 workers, measured on
+    # a 16-thread machine). Each value added multiplies the job count - check with --dry-run.
+    # Delta was trimmed because the stage-1 validation showed it barely matters (see README).
+    grid:
+      spatial.magnitude:    [1, 2, 3]
+      spatial.alpha:        [0.25, 0.5, 0.75]
+      spatial.delta:        [8, 30]
+      spatial.holes_fill:   [0]
+      temporal.alpha:       [0.1, 0.25, 0.5]
+      temporal.delta:       [20]
+      temporal.persistence: [0, 3]
+
+  "3":
+    description: refinement - best stage-2 combinations x decimation x hole filling x HDR
+    kind: refine
+    top_k: 5                   # best spatial x temporal combinations from stage 2
+    vary:
+      decimation.magnitude: [1, 2, stage1_best]
+      hole_filling.mode:    [off, 0, 1, 2]
+      hdr_merge.enabled:    [false, true]
+
+# Quick check: one scan, a handful of configs (run_sweep.py --smoke)
+smoke:
+  shapes: [Big_Wave]
+  heights: [863mm]
+  scans: [A1]
+  configs:
+    - {}                                                     # baseline
+    - {spatial: {}}                                          # spatial, defaults
+    - {temporal: {}}                                         # temporal, defaults
+    - {temporal: {alpha: 0.1, persistence: 3}}
+    - {spatial: {}, temporal: {}}
+    - {decimation: {magnitude: 4}}
+    - {hole_filling: {mode: 1}}
+    - {hdr_merge: {enabled: true}}

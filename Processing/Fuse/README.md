@@ -33,7 +33,9 @@ load ─> tilt calibration ─> rotation direction ─> coarse-align (all) ─> 
    compete: the rig-geometry seed (from the folder's tilt/rotation angles) and
    an FPFH+RANSAC feature match. Whichever actually sits better on the map
    wins — a rig seed is scored, not trusted, so a wrong axis or sign shows up
-   as a low overlap score instead of silently poisoning the result.
+   as a low overlap score instead of silently poisoning the result. With
+   `--tag-align` a third hypothesis, from the rig's AprilTags, joins them
+   (see below).
 5. **Review** — per-scan alignment error (rmse and overlap fraction) for the
    whole batch at once. Select problem scans, exclude them, nudge them by
    hand, or re-run just those, then move on.
@@ -410,10 +412,107 @@ rotation group in the viewer and press **`t`** to flip it. Because the angles
 are cumulative, flipping one step shifts that group *and every later one*,
 and all of them are re-aligned.
 
+With `--tag-align`, groups the tags can place have their angle measured from
+the tags instead, and skip this search — see *Tags set the rotation* below.
+
 Pass `--no-rotation-direction` to skip inference and trust the recorded
 angles as-is. `--rotation-sign` and `--reverse-rotation` still work and set
 the starting assumption, but they are no longer the way to handle this —
 inference overrides them per group.
+
+## AprilTag coarse alignment (`--tag-align`)
+
+The tags around the rig are fixed in the world, and `rs_marker` logs every
+detection beside the scan as `<scan>_detections.csv`. A tag that two scans
+both see is four exact point correspondences between them, which fixes the
+relative pose outright — including the in-plane slide and spin that a flat
+sand surface leaves the geometric methods nearly blind to.
+
+With `--tag-align`, at load time each scan's tags are placed in 3D:
+
+1. corner pixels are the per-tag median over every decoded frame (undecoded
+   `marker_id = -1` rows are ignored);
+2. the raw PLY is projected back into the colour image using the colour
+   intrinsics from `scan_info.txt` (the PLY is depth-aligned-to-colour, in
+   librealsense's `(x, -y, -z)` export frame), and a plane is fitted to the
+   points inside each tag;
+3. each corner is where its pixel's ray meets that plane.
+
+This runs on the *uncropped* cloud, so an ROI that cuts the tags away does not
+lose them. The `[tags]` line per scan reports each tag's edge length — it
+should match your printed tag size, and agree across scans — and its plane
+rms.
+
+Tag poses are then solved from the tags alone, independent of the seeds:
+starting from the reference scan's tags, each round places the scan sharing
+the most tags (at least `--tag-min-shared`, default 1) with those already
+placed, and adds its tags to the set. A scan a wrong seed has misplaced can
+therefore never drag the tag poses with it.
+
+When the scans have IMU gravity readings, the tag fit takes each scan's
+*tilt* from its IMU seed and solves only the turn about vertical plus the
+translation. The two tags a scan sees usually lie nearly in a line, so tilt
+about that line would rest on each 80 mm tag's own plane, which depth noise
+leaves uncertain by a degree or two; the IMU measures tilt far better. The turn
+about vertical — which the IMU cannot see and a flat surface barely constrains
+— is what the tags measure best. On the Small_Wave test session this took the
+tag poses from 1–2.5° off the final ICP poses to 0.2–0.6°.
+
+During coarse alignment the usual seed / FPFH choice runs unchanged first,
+then the tag pose is scored with the same metric and kept only if it fits the
+surface better. The coarse table's `coarse` column says which hypothesis won
+(`seed`, `fpfh` or `tags`). A tag fit whose corners still disagree by more than
+`--tag-max-rmse` (default 10 mm) is not trusted. Scans with no detections
+file, or no chain of shared tags back to the reference, are aligned exactly as
+without the flag.
+
+If the tag pose and the chosen pose differ by more than 10°, a `[!]` warning
+names the rotation group. That is not imprecision — one of them is wrong — and
+on a near-flat scene the surface score may not be able to tell which; a group
+whose scans split between `tags` and `seed` at such an angle ends up fused in
+two orientations. Check it in the viewer and flip the group with `t`.
+
+Tags only seed the coarse pose; ICP still does the fine registration.
+
+### Tags set the rotation
+
+With `--tag-align`, the rotation-direction stage asks the tags first. For each
+rotation group whose scans could be placed by tags, the angle is *measured*:
+the median, over the group's scans, of the turn between the tag pose and the
+folder-angle seed. That angle replaces the folder's, and the group is left out
+of the surface-based direction search. The tags are fixed in the world, so this
+is an observation rather than an inference — it is not limited to ±one folder
+step, and it is not fooled by a surface that looks alike after a 90° turn. On
+the Small_Wave session the surface search put r90 at 0°; the tags measured
+−90°, and they also caught r135, which was really a turn back to −45° (+45 in
+this pipeline's sign convention).
+
+The rotation report marks such groups `tags`, with the spread of the per-scan
+measurements in the margin column. Groups no tag chain reaches still go
+through the usual search, starting from the tag-measured groups around them.
+Pressing `t` on a tag-measured group overrides it and falls back to the folder
+step, reversed.
+
+### Cropped scans: the tag sidecar
+
+The crop tool (`Processing/Crop/crop_pointclouds.py`) cuts the tags out of the
+cloud, so a cropped scan cannot have its tags measured here. Instead the crop
+tool measures them on the original cloud, with the same method, and writes
+`<scan>_tags.csv` beside each cropped PLY (plus copies of `*_detections.csv`
+and `scan_info.txt`). The crop keeps the cloud's frame, so those corners are
+valid for the cropped cloud. `fuse_scans` reads the sidecar whenever one is
+present (logged as `[tags] ... (from sidecar)`), and otherwise measures the
+tags from the cloud itself.
+
+```
+python3 crop_pointclouds.py <session> <cropped_out>        # crops + sidecars
+python3 crop_pointclouds.py <session> <cropped_out> --tags-only   # backfill
+./fuse_scans -o fused.ply --sessions <cropped_out> --tag-align ...
+```
+
+`--tags-only` writes only the sidecars and copies, with no cropping and no
+windows — use it on folders cropped before the sidecar existed (point
+`<cropped_out>` at the same output root so the files land beside the crops).
 
 ## Other input modes
 

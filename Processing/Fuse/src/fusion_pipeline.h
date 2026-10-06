@@ -126,6 +126,29 @@ struct PipelineParams
     // that has essentially no overlap with the map.
     double coarse_min_inlier_fraction = 0.15;
 
+    // --- AprilTag coarse alignment (see tag_alignment.h) ----------------
+    // When on, each scan's tags are located at load time, and coarse
+    // alignment adds a third hypothesis: the pose that puts this scan's tags
+    // on the same tags as already placed by earlier scans. It is scored like
+    // the others and only wins if it actually fits the surface better.
+    bool   use_tag_alignment = false;
+
+    // Tags two scans must share before a tag pose is attempted. One tag's
+    // four corners already fix all six DOF; two make the rotation far better
+    // conditioned (the lever arm becomes the tag spacing, not the tag size).
+    int    tag_min_shared = 1;
+
+    // A tag fit whose corners disagree by more than this (rms, metres) after
+    // fitting is discarded: something is wrong with a detection or its depth.
+    // With the tilt taken from the IMU, a residual of a few mm is normal - it
+    // is the IMU's tilt error spread over the ~600 mm between tags.
+    double tag_max_fit_rmse = 0.010;
+
+    // Tag and geometric poses further apart than this are not a question of
+    // precision: one of them is wrong outright, usually a rotation group the
+    // direction stage resolved the wrong way. Logged loudly when it happens.
+    double tag_disagreement_warn_deg = 10.0;
+
     // How far from the camera's optical centre to look for the tilt axis,
     // in metres. Keep this near the physical truth: a rig whose tilt axis
     // sits close to the camera face needs only a small range, and searching

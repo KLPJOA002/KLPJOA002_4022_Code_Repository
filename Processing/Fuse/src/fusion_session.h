@@ -93,6 +93,13 @@ struct RotationGroup
 
     AlignmentQuality chosen_quality;
     AlignmentQuality rejected_quality;
+
+    // Angle measured from the AprilTags rather than inferred from the surface.
+    // The tags are fixed in the world, so they say outright how far the rig
+    // turned - including turns the folder names don't describe (e.g. a step
+    // back past the start). Such a group is left out of the direction search.
+    bool   from_tags = false;
+    double tag_spread_deg = 0.0;  // largest per-scan deviation from the group's angle
 };
 
 // What the tilt calibration measured. Also a diagnostic: if the residual
@@ -299,6 +306,10 @@ private:
     // Groups scans by their rotation folder, ordered as captured.
     void buildRotationGroups();
 
+    // Sets each rotation group's angle from its scans' tag poses, where any
+    // exist. See RotationGroup::from_tags.
+    void resolveRotationFromTags();
+
     // Re-derives cumulative angles from the per-step signs, and rewrites
     // every affected scan's initial guess to match.
     void applyRotationAngles(size_t from_group_index);
@@ -316,9 +327,24 @@ private:
     // Picks each group's lowest-tilt scan and caches its gravity.
     void resolveGroupGravityReferences();
 
+    // Coarse-aligns one scan: the usual geometric hypotheses first, then -
+    // with tag alignment on and a tag pose solved for the scan - the tag
+    // pose, keeping whichever scores better on the map.
+    void computeCoarseFor(size_t index, const PointCloudT::ConstPtr& map);
+
     // Chooses between the rig-geometry seed and a feature-matched pose by
     // scoring both, and records the winner on the scan.
-    void computeCoarseFor(size_t index, const PointCloudT::ConstPtr& map);
+    void computeGeometricCoarseFor(size_t index, const PointCloudT::ConstPtr& map);
+
+    // Places every scan it can from the tags alone: starting from the
+    // reference's tags, repeatedly fits the unplaced scan sharing the most
+    // tags with those already placed, and adds its tags to the set. Kept
+    // independent of the geometric placements on purpose - a scan a wrong
+    // seed has misplaced would otherwise drag every tag it sees with it.
+    void solveTagPoses();
+
+    // Finds and locates one scan's tags from its raw cloud.
+    void locateScanTags(ScanState& scan, const PointCloudT& raw) const;
 
     // Least-squares fit of the pivot that explains a set of observed
     // rotations: each observation contributes (I - R) p = t.

@@ -13,7 +13,7 @@ int mountSerial::serial_write(char *w_buf, uint32_t w_buf_len, char *r_buf, uint
   //ToDo: polling delay for 1 second
   //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-  int num_bytes = read(serial_port, &in_buf, sizeof(in_buf));
+  int num_bytes = read(serial_port, &in_buf, sizeof(in_buf) - 1);  // -1 keeps the NUL terminator for strcpy
   if (num_bytes < 0) {
     printf("Error reading: %s\n", strerror(errno));
     close(serial_port);
