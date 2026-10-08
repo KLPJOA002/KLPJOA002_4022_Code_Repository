@@ -63,8 +63,15 @@ def reference(path: Path, units: str):
 
 def tag_layout(height_dir: Path):
     """Corner-tag layout learned from every session of this (shape, height),
-    as crop_pointclouds.py learns it for its input directory."""
-    return crop_tool.learn_tag_layout(height_dir)
+    as crop_pointclouds.py learns it for its input directory. At 641 mm the
+    far tags (2, 5) never decode, so no order can be learned there and the
+    cropper would guess slots from geometry, taking an undecoded square on
+    the part for a corner tag (crop lands on bare table). The tag board is
+    the same at every height, so fall back to the layout of the whole shape."""
+    layout = crop_tool.learn_tag_layout(height_dir)
+    if layout.order is None:
+        layout = crop_tool.learn_tag_layout(height_dir.parent)
+    return layout
 
 
 def stage_scan_folder(stage_root: Path, scan_dir: Path, rs_frame: int) -> Path:

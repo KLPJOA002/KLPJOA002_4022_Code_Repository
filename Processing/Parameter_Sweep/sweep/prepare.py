@@ -71,11 +71,15 @@ def seed_transform(points: np.ndarray, reference_bounds_m) -> tuple[np.ndarray, 
         raise PrepareError("seed: no object found above the table plane")
     labels = np.asarray(o3d.geometry.PointCloud(o3d.utility.Vector3dVector(raised))
                         .cluster_dbscan(C.SEED_CLUSTER_EPS_M, 20))
+    sizes = {lab: int((labels == lab).sum()) for lab in set(labels.tolist()) - {-1}}
+    # Ignore fragments far smaller than the biggest cluster: at 641 mm a 74-point
+    # speck 40 mm off axis beat the 10k-point part 44 mm off axis.
+    min_size = max(50, 0.2 * max(sizes.values(), default=0))
     best = None
-    for lab in set(labels.tolist()) - {-1}:
-        q = raised[labels == lab]
-        if len(q) < 50:
+    for lab, size in sizes.items():
+        if size < min_size:
             continue
+        q = raised[labels == lab]
         # The camera looks at the part: take the cluster nearest the optical axis.
         off_axis = np.linalg.norm(np.cross(q.mean(axis=0), [0.0, 0.0, 1.0]))
         if best is None or off_axis < best[0]:
