@@ -1,0 +1,145 @@
+# Rotation x tilt combination sweep: everything you'd want to edit lives here.
+#   .venv/bin/python run_sweep.py plan                  # job count, disk, time estimate
+#   .venv/bin/python run_sweep.py run --dry-run         # list every planned job
+#   .venv/bin/python run_sweep.py run --pilot           # one wave, one height, end to end
+#   .venv/bin/python run_sweep.py run                   # everything (resumable)
+#   .venv/bin/python run_sweep.py analyze RUN_DIR       # plots, tables, summary.md
+#   .venv/bin/python run_sweep.py voxel                 # scan-voxel / fusion-cell sensitivity
+# Relative paths are resolved against this file's folder.
+
+data_root: /media/aru/Seagate/roughness/Joab_Characterisation/3D_Error
+waves: [Small_Wave, Big_Wave]
+heights: all                     # or a list, e.g. [641mm, 863mm]
+
+# The full-sweep session of each height is the one with the most scans; it must have at
+# least this many (the other session has 4).
+min_session_scans: 40
+
+# Ground truth per wave (meshes in mm, top surface z = h(x, y)); as Filter_Sweep.
+references:
+  Small_Wave: ../Evaluate/References/Egg carton-smaller v1 (1).stl
+  Big_Wave:   ../Evaluate/References/EGG_1PK.stl
+
+# Outputs. Each `run` writes to <experiments_root>/<timestamp>/ unless --out is given;
+# pass --out <existing run dir> to resume it. Cropped scans are shared between runs.
+experiments_root: ../Experiments
+crop_cache: ../Experiments/crop_cache
+keep_fused_ply: true             # false: delete each fused .ply once it has been evaluated
+
+# ---------------------------------------------------------------------------------------
+# Fusion: ../Fuse/build/fuse_scans, always run with --no-gui on a staging session that
+# holds only the combination's scans (symlinks to the cropped tilt folders).
+fuse:
+  binary: ../Fuse/build/fuse_scans
+  # Every key becomes a flag: key: value -> --key value, key: true -> --key, false -> omitted.
+  # scan-voxel and fusion-cell are part of the cache key, so changing them re-fuses.
+  params:
+    scan-voxel: 0.0005
+    fusion-cell: 0.0005
+    tag-align: true
+    # Seeds each rotation group about z and lets fuse_scans resolve the turn from the tags.
+    # Without it every rotation group is seeded at identity and the egg carton's 90 deg
+    # symmetry lets some scans keep the unrotated pose (pilot, Big_Wave 863 mm: z bias of
+    # rot-all_tilt-0-pm10 -0.99 -> -0.30 mm, all-44 fused surface thickness 0.18 -> 0.08 mm).
+    rotation-axis: z
+  timeout_s: 3600                # a fusion running longer than this is killed and recorded as failed
+
+# Crop (../Crop automatic AprilTag crop, used as-is; settings as Filter_Sweep / Parameter_Sweep)
+crop:
+  margin_px: 10
+  frame_window: 15
+
+# Evaluation (../Evaluate scan_eval.evaluate_scan, used as-is), after the Parameter_Sweep seed
+# pose and Filter_Sweep's part trim.
+part_trim_margin_mm: 30
+min_covered_fraction: 0.85       # rows covering less of the reference are marked "suspect"
+evaluate:
+  units: m
+  reference_units: mm
+  seed: 0
+  align: full
+  write_ply: false
+  write_overlay: false
+  write_plots: false
+
+# ---------------------------------------------------------------------------------------
+# Parallelism. Each worker runs one job (fusion, then evaluation) at a time.
+workers: 6
+threads_per_worker: 2            # OMP_NUM_THREADS for fuse_scans and Open3D in each worker
+# Seconds per job used by `plan` until measured timings exist in a run directory.
+estimate_s:
+  fuse_per_scan: 6
+  evaluate: 20
+# Disk used per job, for `plan` (MB).
+estimate_mb:
+  fused_ply: 20
+  cropped_scan: 3 
+
+# ---------------------------------------------------------------------------------------
+# Combinations. The data has rotations 0, 45, 90, 135 and signed tilts -25..25 in 5 deg steps.
+# A family is a name -> list of angles ("all" = every angle in the session).
+# Names become the combination id: rot-<rotation family>_tilt-<tilt family>.
+rotation_families:
+  "0":        [0]
+  "0-45":     [0, 45]
+  "0-90":     [0, 90]
+  "45-135":   [45, 135]          # every other rotation, not including 0
+  "0-45-90":  [0, 45, 90]
+  all:        all
+
+tilt_families:
+  "0":                 [0]
+  "0-pm5":             [0, -5, 5]
+  "0-pm10":            [0, -10, 10]
+  "0-pm25":            [0, -25, 25]
+  "0-pm10-pm20":       [0, -10, 10, -20, 20]
+  "0-pm10-pm20-pm25":  [0, -10, 10, -20, 20, -25, 25]
+  "0-pos":             [0, 5, 10, 15, 20, 25]     # one tilt direction only
+  all:                 all
+
+# Fused combinations = rotation families x tilt families below (one-scan cells are covered
+# by the single-scan baselines). rot-all_tilt-all is the all-44 upper bound.
+grid:
+  rotations: ["0", "0-45", "0-90", "45-135", "0-45-90", all]
+  tilts: ["0", "0-pm5", "0-pm10", "0-pm25", "0-pm10-pm20", "0-pm10-pm20-pm25", "0-pos", all]
+
+# Every individual scan evaluated unfused (fuse_scans needs >= 2 scans).
+single_scans: true
+
+# Pilot: one wave x one height, a handful of combinations spanning small to all-44.
+pilot:
+  waves: [Small_Wave, Big_Wave]     # x heights: 641 mm is the hard crop case
+  heights: [641mm, 863mm]
+  combos: [rot-0_tilt-0-pm5, rot-0-90_tilt-0, rot-0_tilt-all, rot-all_tilt-0-pm10, rot-all_tilt-all]
+  singles: [r0_a0, r45_a-25, r135_a25]
+
+# ---------------------------------------------------------------------------------------
+# Analysis
+analysis:
+  primary_metric: acc_rmse_mm      # used for rankings and "within X%" (lower is better)
+  # Metrics plotted; "higher" ones are better when larger.
+  metrics:
+    acc_rmse_mm: lower
+    acc_rmse_trim5_mm: lower
+    signed_std_mm: lower
+    z_bias_mm: abs
+    completeness_full@1mm: higher
+    covered_fraction: higher
+    chamfer_mm: lower
+  within_percent: 5                # smallest subset within X% of all-scans quality
+  include_suspect: false
+
+# ---------------------------------------------------------------------------------------
+# Voxel / cell sensitivity (separate command: run_sweep.py voxel)
+voxel_sweep:
+  waves: [Small_Wave, Big_Wave]
+  heights: [701mm, 863mm]
+  combos: [rot-all_tilt-all, rot-0-90_tilt-0-pm10-pm20, rot-all_tilt-0, rot-0_tilt-all]
+  # Each pair is (scan-voxel, fusion-cell). Default: matched values.
+  pairs:
+    - [0.00025, 0.00025]
+    - [0.0005, 0.0005]
+    - [0.001, 0.001]
+    - [0.002, 0.002]
+    - [0.0005, 0.001]
+    - [0.00025, 0.0005]

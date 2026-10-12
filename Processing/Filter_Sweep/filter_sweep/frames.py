@@ -45,12 +45,23 @@ def _decode_cpp(bag: Path, workdir: Path):
     env = dict(os.environ)
     if os.environ.get("RS_DECODE_LIBRARY_PATH"):   # librealsense outside the linker path (decoder only)
         env["LD_LIBRARY_PATH"] = os.environ["RS_DECODE_LIBRARY_PATH"]
-    proc = subprocess.Popen([str(DECODER_BIN), str(bag), str(meta_path)], stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, env=env)
-    raw = proc.stdout.read()
-    err = proc.stderr.read().decode(errors="replace")
-    if proc.wait() != 0:
+
+    # librealsense >= 2.58 chooses the reader by extension: *.db3 -> ROS2 sqlite.
+    # These are ROS1 bags, so hand the decoder a .bag-named symlink.
+    link = workdir / "recording.bag"
+    link.unlink(missing_ok=True)
+    link.symlink_to(Path(bag).resolve())
+    try:
+        proc = subprocess.Popen([str(DECODER_BIN), str(link), str(meta_path)],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        raw = proc.stdout.read()
+        err = proc.stderr.read().decode(errors="replace")
+        rc = proc.wait()
+    finally:
+        link.unlink(missing_ok=True)
+    if rc != 0:
         raise DecodeError(f"rs_decode failed: {err.strip()}")
+
     lines = [json.loads(l) for l in meta_path.read_text().splitlines() if l.strip()]
     meta_path.unlink()
     stream, frames = lines[0]["stream"], lines[1:]

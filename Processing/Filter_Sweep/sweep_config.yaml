@@ -15,7 +15,7 @@
 #   decimation.magnitude  2..8 (1 = off). Changes the depth resolution (see README)
 #   hdr_merge.enabled     needs HDR recordings (sequence metadata); skipped otherwise
 
-data_root: /run/media/joab/Seagate/roughness/Joab_Characterisation/3D_Error
+data_root: /media/aru/Seagate/roughness/Joab_Characterisation/3D_Error
 
 # Shape folders to process (case as on disk). Big_Pyramid / Small_Pyramid were not scanned.
 shapes: [Small_Wave, Big_Wave]
