@@ -1,0 +1,74 @@
+# Roughness settings - edit and re-run. Load with:
+#   roughness_scans.py --config roughness_config.example.toml scans/
+#
+# Any value here can still be overridden per run with the matching flag
+# (--grid-mm, --detrend, ...), which always wins over this file. Keys may sit
+# at the top level or in sections; unknown keys are an error. All distances
+# are millimetres. Every default is explained in roughness/params.py.
+
+# scans = ["../Fused_Scans"]   # instead of listing them on the command line
+
+seed   = 0
+output = "roughness_out"
+# label = "d435_close_tsdf"
+
+[units]
+units = "m"                # the scan PLYs: RealSense and Fuse output are metres
+scale = 1.0
+
+[orientation]
+sensor_origin = "0,0,0"    # camera position in the scan frame (mm); "none" for scans
+                           # already aligned into a reference frame
+inplane_axis  = "input"    # input (camera x projected on the bed) | pca (long axis)
+orient_clip_sigma  = 3.0
+orient_iterations  = 5
+
+[crop]
+# roi_mm = [-150.0, -100.0, 150.0, 100.0]  # x0, y0, x1, y1 in the levelled frame
+edge_trim_mm = 0.0         # fused scans often curl at the border: try 5-15
+
+[detrend]
+detrend = ["planar"]       # planar | quadratic | cubic | quartic, a list, or "all"
+# primary_detrend = "quadratic"   # default: the first listed
+detrend_clip_sigma = 3.0
+detrend_iterations = 5
+expected_wavelength_mm = 0.0      # 0 = use the measured dominant wavelength
+detrend_warn_fraction  = 0.25
+
+[grid]
+grid_mm = 0.0              # 0 = auto, 2 x median point spacing
+max_hole_cells = 2         # interpolate interior holes up to this many cells across
+min_points_per_cell = 1
+min_grid_cells = 32        # fail if the footprint is narrower than this many cells
+
+[spatial]
+acf_threshold = 0.2        # ISO 25178 s for Sal / Str
+wavelength_max_fraction = 0.5
+# psd_band_mm = [2.0, 100.0]   # default 4 x grid .. footprint / 4
+psd_bins = 60
+
+[multiscale]
+multiscale_sizes = 8
+window_min_valid = 0.8
+window_detrend = "plane"   # plane | mean
+bootstrap_samples = 1000
+bootstrap_window_mm = 0.0  # 0 = auto
+bootstrap_min_windows = 16
+
+[ruggedness]
+ruggedness_window = 3      # TRI / VRM window in cells (odd); 0 = off
+
+[noise]                    # one of:
+noise_sigma_mm = 0.0       # known per-point sensor noise (1 sigma)
+# noise_scan = "flat_plate.ply"
+noise_warn_fraction = 0.5
+
+[validity]
+footprint_wavelengths_min = 5.0
+
+# [validation]
+# reference_def = "../Evaluate/surfaces/egg_carton.toml"
+# reference_units = "mm"
+
+[plots]
+write_plots = true

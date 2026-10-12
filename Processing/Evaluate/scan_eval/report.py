@@ -227,11 +227,12 @@ def write_json(path, data):
         json.dump(data, fh, indent=2, default=default, allow_nan=True)
 
 
-def append_results(csv_path, row: dict):
+def append_results(csv_path, row: dict, lead_columns=None):
     """Append one row. If the columns changed (e.g. different thresholds), the
     file is rewritten with the union of columns so nothing is lost and the
-    table stays rectangular."""
+    table stays rectangular. lead_columns (default LEAD_COLUMNS) come first."""
     csv_path = Path(csv_path)
+    lead_columns = LEAD_COLUMNS if lead_columns is None else lead_columns
     row = {k: ("" if v is None else v) for k, v in row.items()}
     rows, columns = [], []
     if csv_path.exists() and csv_path.stat().st_size > 0:
@@ -241,7 +242,7 @@ def append_results(csv_path, row: dict):
             rows = list(reader)
     new_cols = [c for c in row if c not in columns]
     if new_cols or not columns:
-        ordered = [c for c in LEAD_COLUMNS if c in row or c in columns]
+        ordered = [c for c in lead_columns if c in row or c in columns]
         rest = sorted((set(columns) | set(row)) - set(ordered))
         columns = ordered + rest
         tmp = csv_path.with_suffix(".csv.tmp")
