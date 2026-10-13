@@ -133,7 +133,7 @@ static void apply_depth_settings(rs2::depth_sensor& ds, const CamConfig& cam)
 {
     try_set(ds, RS2_OPTION_VISUAL_PRESET, float(preset_value(cam.preset)), "visual preset");
     try_set(ds, RS2_OPTION_DEPTH_UNITS, cam.depth_units, "depth units");
-    try_set(ds, RS2_OPTION_THERMAL_COMPENSATION, 0.0f, "thermal compensation");
+    try_set(ds, RS2_OPTION_THERMAL_COMPENSATION, 1.0f, "thermal compensation");
 }
 
 static void start_pipeline(PipelineCtx& ctx, const std::string& output_file, bool test_mode, const CamConfig& cam)
