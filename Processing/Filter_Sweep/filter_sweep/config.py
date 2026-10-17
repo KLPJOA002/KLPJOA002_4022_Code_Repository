@@ -20,7 +20,8 @@ DEFAULT_CONFIG = HERE / "sweep_config.yaml"
 
 # Bump when the per-job pipeline changes in a way that alters results; rows
 # written by an older version are then redone.
-PIPELINE_VERSION = 2
+# 3: zero-initialised filter output memory (memory.py) + physical depth gate.
+PIPELINE_VERSION = 3
 
 FILTERS = ("decimation", "hdr_merge", "spatial", "temporal", "hole_filling")
 PARAMS = {

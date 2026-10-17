@@ -2,6 +2,7 @@
 
 #include <limits>
 #include <string>
+#include <vector>
 
 #include <Eigen/Dense>
 
@@ -24,6 +25,9 @@ enum class ScanStatus
 };
 
 const char* toString(ScanStatus status);
+
+// Inverse of toString, for statuses read back from a poses file.
+bool parseScanStatus(const std::string& text, ScanStatus& out);
 
 // True for statuses whose transform is good enough to contribute points.
 bool contributesToFusion(ScanStatus status);
@@ -118,6 +122,46 @@ struct ScanState
     // Set when fine_quality tripped the rejection threshold. The scan is
     // still usable (and still fused) - this only marks it for attention.
     bool flagged = false;
+
+    // --- Quality control (see FusionSession::computeQc) ------------------
+    // How far the tag pose and the geometric coarse pose put this scan apart,
+    // when both existed. Tens of degrees means one of them is wrong outright.
+    bool   has_tag_disagreement = false;
+    double tag_disagreement_deg = 0.0;
+    double tag_disagreement_shift = 0.0;   // camera position, metres
+
+    // Corner residual of a tag fit that was *rejected* (tag_fit is then
+    // invalid), metres; negative when no fit was rejected. Many of these in a
+    // session mean the tilt seeds the fit is constrained by are wrong.
+    double tag_rejected_rms = -1.0;
+
+    // Why the scan needs a human to look at it (empty: it doesn't), and
+    // softer observations that do not on their own. needs_review is
+    // qc_reasons being non-empty, unless a review has since accepted it.
+    std::vector<std::string> qc_reasons;
+    std::vector<std::string> qc_warnings;
+    bool needs_review = false;
+
+    // One attempt of the automatic retry ladder (FusionSession::runAutoRetry).
+    // Scores are against the same map of every other scan, lower is better.
+    struct RetryAttempt
+    {
+        std::string rung;
+        double score_before = 0.0;
+        double score_after = 0.0;
+        bool   kept = false;      // the attempt's pose replaced the previous one
+        bool   cleared = false;   // and left the scan with no qc_reasons
+    };
+    std::vector<RetryAttempt> retries;
+
+    // Who left the scan out: "" (nobody), "auto" (the pipeline - it failed
+    // to load) or "manual" (excluded in a review). The pipeline never
+    // excludes a scan for registering badly; it flags it instead.
+    std::string excluded_by;
+
+    // Set by a --review pass that saved this scan's pose.
+    bool        reviewed = false;
+    std::string reviewed_at;
 
     std::string label() const { return input.label(); }
 

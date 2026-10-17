@@ -22,6 +22,13 @@ tilt_sign = 1
 # know it.
 # rotation_pivot = 0, 0, 0
 
+# How the IMU's axes sit relative to the frame the PLYs are written in:
+# identity, rx180, ry180, rz180, or auto to let the tilt calibration choose.
+# A fixed property of the camera (rx180 for the D456 exports used here:
+# y and z negated). "auto" can pick wrongly - see README, "The IMU is not
+# necessarily in the point cloud's frame". Overridden by --imu-frame.
+imu_frame = rx180
+
 # --- Rotation (between sessions) ---
 # Axis your rig's rotation stage turns about.
 rotation_axis = z

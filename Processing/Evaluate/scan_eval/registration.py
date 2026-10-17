@@ -139,6 +139,38 @@ def parse_sensor_origin(text) -> np.ndarray | None:
     return v * 1e-3
 
 
+def parse_nudge(text) -> np.ndarray:
+    if text is None or str(text).strip() == "":
+        return np.zeros(3)
+    if isinstance(text, (list, tuple)):          # TOML: nudge_mm = [x, y, z]
+        text = ",".join(str(t) for t in text)
+    try:
+        v = np.array([float(t) for t in str(text).split(",")])
+    except ValueError:
+        v = np.zeros(0)
+    if v.shape != (3,) or not np.all(np.isfinite(v)):
+        raise ValueError(f"--nudge expects x,y,z in mm (got '{text}')")
+    return v * 1e-3
+
+
+def nudge_transform(T: np.ndarray, ref, nudge_mm, rotate_deg: float, seed: int = 0) -> np.ndarray:
+    """Move a seed pose by hand, in the reference frame (the frame overlay.ply
+    is drawn in): rotate about the reference's plane normal through its
+    centre, then translate. For pulling a periodic part's alignment onto the
+    right period before --align refine."""
+    shift = parse_nudge(nudge_mm)
+    if not rotate_deg and not shift.any():
+        return T
+    rp, rn = ref.sample(20000, seed)
+    vis = ref.visible_mask(rp, rn)
+    centre, _, _, n = reference_frame(rp[vis], rn[vis], ref.visible_from)
+    P = translation(shift) @ rotation_about(n, np.radians(rotate_deg), centre)
+    log(f"[align] nudged the seed: rotate {rotate_deg:g} deg about the reference normal "
+        f"({', '.join(f'{x:.3f}' for x in n)}) through its centre, then move "
+        f"({', '.join(f'{x * 1e3:g}' for x in shift)}) mm")
+    return P @ np.asarray(T, float)
+
+
 def fpfh(pcd, voxel):
     return reg.compute_fpfh_feature(
         pcd, o3d.geometry.KDTreeSearchParamHybrid(radius=10 * voxel, max_nn=100))

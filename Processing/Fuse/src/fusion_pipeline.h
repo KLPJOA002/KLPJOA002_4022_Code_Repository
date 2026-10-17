@@ -108,6 +108,39 @@ struct PipelineParams
     double icp_transformation_epsilon     = 1e-8;
     double icp_euclidean_fitness_epsilon  = 1e-6;
 
+    // --- Quality control (--qc, --auto-retry, exit code 3) ----------------
+    // These decide whether a session goes into the review queue. They only
+    // label results; nothing is excluded or changed because of them. The
+    // defaults come from the all-44 fusions of the 2026-10-08 sweep
+    // (20261008_144029, scan voxel and fusion cell 0.5 mm), where the two
+    // sessions with a ghost layer (Big_Wave 763 and 933 mm) and the ten
+    // without separate cleanly on each of them.
+
+    // A scan whose coarse pose covered less of the map than this is flagged:
+    // ICP rarely recovers from it, and on a near-planar scene it tends to
+    // settle into a parallel layer a few mm off. Ghost-layer sessions had 30
+    // scans at 19-37%; clean sessions had none below 60%.
+    double qc_min_coarse_inlier_fraction = 0.5;
+
+    // Session-level, from the fused result's ReconcileReport. spread_after
+    // (thickness left after combining) separates far better than
+    // spread_before, which also rises with camera height in clean sessions:
+    //   spread_before  clean 0.92-1.55 mm   ghost 2.04-2.21 mm
+    //   spread_after   clean 0.06-0.22 mm   ghost 1.12-2.11 mm
+    // Both scale with the fusion cell, so revisit them for other cell sizes.
+    double qc_max_spread_before = 0.0018;  // metres
+    double qc_max_spread_after  = 0.0005;  // metres
+
+    // The retry ladder's coarse step runs on the scan and the map thinned to
+    // this spacing (ICP and every keep/reject score still use full
+    // resolution). Against the full map a weak seed falls through to FPFH,
+    // and the FPFH radii above are tuned for a ~3 mm cloud: at a 0.5 mm scan
+    // voxel each point has thousands of neighbours inside fpfh_radius, and
+    // one retry of one scan took over 6 minutes (Big_Wave 763 mm, 43-scan
+    // map) before this. A coarse pose is the same transform whatever the
+    // density it was found at.
+    float  retry_coarse_voxel = 0.003f;  // metres
+
     // Review flag. A flagged scan is still fused - this only marks it for a
     // look. A refined scan is flagged when ICP hit its iteration cap, or when
     // its alignment score is more than this many times the batch median.

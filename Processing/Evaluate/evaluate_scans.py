@@ -28,6 +28,8 @@ import argparse
 import sys
 from pathlib import Path
 
+import numpy as np
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from scan_eval import log as L  # noqa: E402
@@ -64,6 +66,10 @@ def build_parser():
 
   # reproduce / seed an alignment
   evaluate_scans.py --reference-def surfaces/egg_carton.toml --init-transform prev/transform.txt scan.ply
+
+  # wrong period / turn in overlay.ply: nudge the previous pose, then re-refine
+  evaluate_scans.py --reference-def surfaces/egg_carton.toml --init-transform prev/transform.txt \
+      --nudge=-25,0,0 --nudge-rotate 90 --align refine scan.ply
 
   # export the analytic reference as a printable solid
   evaluate_scans.py --reference-def surfaces/egg_carton.toml --export egg.stl --export-base 0
@@ -104,6 +110,12 @@ def build_parser():
                         "--init-transform/identity only; none: use --init-transform as-is")
     a.add_argument("--init-transform", metavar="FILE",
                    help="4x4 matrix (scan metres -> reference metres), e.g. a previous transform.txt")
+    a.add_argument("--nudge", metavar="X,Y,Z", dest="nudge_mm",
+                   help="move the --init-transform seed by this much (mm, reference frame = "
+                        "overlay.ply's frame) before aligning; write --nudge=-25,0,0 for negatives")
+    a.add_argument("--nudge-rotate", type=float, metavar="DEG", dest="nudge_rotate_deg",
+                   help="rotate the seed about the reference's normal through its centre "
+                        "(applied before --nudge)")
     a.add_argument("--align-voxel", type=float, metavar="MM", dest="align_voxel_mm",
                    help="voxel for the alignment copy of the scan (default: reference diagonal/60)")
     a.add_argument("--eval-distance", type=float, metavar="MM", dest="eval_distance_mm",
@@ -175,6 +187,9 @@ def resolve_params(args) -> tuple[EvalParams, dict]:
         raise ValueError("--scale must be positive")
     if params.align not in ("full", "refine", "none"):
         raise ValueError("align must be full, refine or none")
+    from scan_eval.registration import parse_nudge
+    if (parse_nudge(params.nudge_mm).any() or params.nudge_rotate_deg) and not params.init_transform:
+        warn("--nudge / --nudge-rotate without --init-transform: nudging the identity pose")
     return params, extra
 
 
@@ -274,6 +289,10 @@ def main(argv=None):
         if params.init_transform:
             from scan_eval.pipeline import read_transform
             init = read_transform(params.init_transform)
+        from scan_eval.registration import nudge_transform, parse_nudge
+        if parse_nudge(params.nudge_mm).any() or params.nudge_rotate_deg:
+            init = nudge_transform(np.eye(4) if init is None else init, ref_m,
+                                   params.nudge_mm, params.nudge_rotate_deg, params.seed)
 
         from scan_eval.pipeline import evaluate_scan, unique_run_names
         out_root = Path(params.output)

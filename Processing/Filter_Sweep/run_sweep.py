@@ -22,6 +22,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from filter_sweep.memory import ensure_zeroed_malloc  # noqa: E402
+
+ensure_zeroed_malloc()   # see filter_sweep/memory.py: re-execs once with MALLOC_PERTURB_=255
 from filter_sweep.config import load_settings  # noqa: E402  (yaml only, no numpy yet)
 
 
@@ -37,6 +40,8 @@ def main():
     p.add_argument("--keep", action="store_true",
                    help="keep each job's folder (filtered.ply, trimmed.ply, Evaluate output) under results/jobs/")
     p.add_argument("--limit-configs", type=int, help="only the first N configs of the stage (testing)")
+    p.add_argument("--configs", help="only these configs of the stage: comma-separated config_ids or exact "
+                                     "config labels, e.g. 'baseline (no filters),sp m2 a0.5 d20 h5'")
     p.add_argument("--shapes", help="override: comma-separated shape folders")
     p.add_argument("--heights", help="override: comma-separated height folders, e.g. 641mm,863mm")
     p.add_argument("--scans", help="override: comma-separated scan ids (A1..A4, B)")
@@ -61,7 +66,8 @@ def main():
 
     from filter_sweep.runner import run_stage
     kw = dict(workers=workers, dry_run=args.dry_run, retry_failed=args.retry_failed, keep=args.keep,
-              limit_configs=args.limit_configs)
+              limit_configs=args.limit_configs,
+              only_configs=[c.strip() for c in args.configs.split(",")] if args.configs else None)
     if args.smoke:
         run_stage("smoke", settings, smoke=True, **kw)
     else:

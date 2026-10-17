@@ -42,6 +42,7 @@
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <set>
 #include <cstdio>
 #include <iomanip>
 #include <sstream>
@@ -54,6 +55,7 @@
 #include "fusion_pipeline.h"
 #include "fusion_reconcile.h"
 #include "fusion_session.h"
+#include "pose_io.h"
 #include "scan_discovery.h"
 #include "visualizer.h"
 
@@ -93,6 +95,9 @@ void printUsage(const char* prog)
         "  --list-only          print what --sessions discovers and exit (no fusion)\n"
         "  --no-imu-tilt            don't take the tilt from the IMU's gravity vector;\n"
         "                           use the commanded angles about --tilt-axis instead\n"
+        "  --imu-frame <f>          how the IMU's axes sit relative to the cloud frame:\n"
+        "                           identity, rx180, ry180, rz180, or auto to let the tilt\n"
+        "                           calibration choose (overrides the rig config)\n"
         "  --no-tilt-calibration    don't measure the tilt head's pivot offset from\n"
         "                           the low-tilt scans; rotate seeds about the origin\n"
         "                           (or about --tilt-pivot, if given)\n"
@@ -133,7 +138,24 @@ void printUsage(const char* prog)
         "                       quality, viewing angle and range\n"
         "  --no-fusion-sor      skip outlier removal on the fused cloud\n"
         "\n"
-        "  --no-gui             run every stage straight through, no viewer or review\n";
+        "  --no-gui             run every stage straight through, no viewer or review\n"
+        "\n"
+        "Register once, fuse many (see README, \"Registering once per session\"):\n"
+        "  --save-poses <file>  after registration, write every scan's pose, status and QC\n"
+        "  --load-poses <file>  skip registration: apply the stored poses and go straight\n"
+        "                       to fusion (tag solving, calibration, coarse, ICP all skipped)\n"
+        "  --scans <list|@file> with --load-poses, fuse only these scans: comma-separated\n"
+        "                       labels as in the poses file (e.g. r0_a0,r45_a-5), or @file\n"
+        "                       with one label per line\n"
+        "  --qc <file>          write per-scan QC and the fusion report (spreads) as JSON\n"
+        "  --auto-retry         after fine registration, retry each scan that needs review\n"
+        "                       (full-map coarse, then without tags, then a group flip)\n"
+        "  --auto-retry-max-scans <n>  retry at most this many, worst first (default 12)\n"
+        "  --review             with --load-poses and --save-poses: open the viewer on the\n"
+        "                       stored poses at the first flagged scan, save on exit\n"
+        "\n"
+        "Exit codes: 0 done; 3 output written but something needs review (only with\n"
+        "--save-poses, --load-poses, --qc or --auto-retry); anything else is a failure.\n";
 }
 
 Eigen::Matrix4f transformFromTranslationQuaternion(float tx, float ty, float tz,
@@ -178,6 +200,12 @@ std::vector<ScanInput> parseManifest(const std::string& path)
 
 int main(int argc, char** argv)
 {
+    // Flush every line. Batch runs redirect stdout to a log file, where it is
+    // otherwise block-buffered: a run killed by a timeout (or a power cut)
+    // then loses its last few kB of log, which is exactly the part that says
+    // what it was doing. The cost is negligible next to registration.
+    std::cout.setf(std::ios::unitbuf);
+
     std::string output_path;
     std::string manifest_path;
     std::vector<std::string> ply_args;
@@ -197,6 +225,10 @@ int main(int argc, char** argv)
     bool list_only = false;
     std::string rig_config_path;
     std::vector<std::string> reverse_rotation_sessions;
+    std::string save_poses_path, load_poses_path, qc_path, scans_arg;
+    bool auto_retry = false;
+    size_t auto_retry_max_scans = 12;
+    bool review = false;
 
     // Collected as overrides rather than applied directly, so a
     // --rig-config file always acts as the baseline and these always win
@@ -205,6 +237,7 @@ int main(int argc, char** argv)
     // rig calibration while these stay one-off overrides for a single run.
     std::optional<RigAxis> tilt_axis_override, rotation_axis_override;
     std::optional<float> tilt_sign_override, rotation_step_override, rotation_sign_override;
+    std::optional<std::string> imu_frame_override;
 
     auto parseAxisArg = [](const std::string& axis, RigAxis& out) {
         if (axis == "x" || axis == "X") { out = RigAxis::X; return true; }
@@ -283,6 +316,14 @@ int main(int argc, char** argv)
         {
             calibrate_tilt = false;
         }
+        else if (arg == "--imu-frame" && i + 1 < argc)
+        {
+            const std::string frame = argv[++i];
+            Eigen::Vector3f unused;
+            if (frame != "auto" && !parseImuFrame(frame, unused))
+            { std::cerr << "Unknown --imu-frame value: " << frame << " (use identity, rx180, ry180, rz180 or auto)\n"; return 1; }
+            imu_frame_override = frame;
+        }
         else if (arg == "--no-imu-tilt")
         {
             use_imu_tilt = false;
@@ -357,6 +398,34 @@ int main(int argc, char** argv)
             { std::cerr << "--tilt-pivot expects x,y,z in metres, e.g. 0,-0.04,-0.12\n"; return 1; }
             tilt_pivot_override = Eigen::Vector3f(x, y, z);
         }
+        else if (arg == "--save-poses" && i + 1 < argc)
+        {
+            save_poses_path = argv[++i];
+        }
+        else if (arg == "--load-poses" && i + 1 < argc)
+        {
+            load_poses_path = argv[++i];
+        }
+        else if (arg == "--scans" && i + 1 < argc)
+        {
+            scans_arg = argv[++i];
+        }
+        else if (arg == "--qc" && i + 1 < argc)
+        {
+            qc_path = argv[++i];
+        }
+        else if (arg == "--auto-retry")
+        {
+            auto_retry = true;
+        }
+        else if (arg == "--auto-retry-max-scans" && i + 1 < argc)
+        {
+            auto_retry_max_scans = static_cast<size_t>(std::stoul(argv[++i]));
+        }
+        else if (arg == "--review")
+        {
+            review = true;
+        }
         else if (arg == "-h" || arg == "--help")
         {
             printUsage(argv[0]);
@@ -377,6 +446,7 @@ int main(int argc, char** argv)
     if (rotation_step_override) discovery_opts.rotation_step_deg = *rotation_step_override;
     if (rotation_sign_override) discovery_opts.rig.rotation_sign = *rotation_sign_override;
     if (tilt_pivot_override) discovery_opts.rig.tilt_pivot = *tilt_pivot_override;
+    if (imu_frame_override) discovery_opts.rig.imu_frame = *imu_frame_override;
     // ...overwritten last by any explicit CLI flags above.
 
     if (!session_dirs.empty() && !manifest_path.empty())
@@ -385,7 +455,27 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (output_path.empty() && !list_only)
+    if (review && (load_poses_path.empty() || save_poses_path.empty() || no_gui))
+    {
+        std::cerr << "--review needs --load-poses and --save-poses, and the viewer (no --no-gui).\n";
+        return 1;
+    }
+    if (!scans_arg.empty() && load_poses_path.empty())
+    {
+        std::cerr << "--scans only applies with --load-poses.\n";
+        return 1;
+    }
+    if (!load_poses_path.empty() && auto_retry)
+        std::cerr << "  [i] --auto-retry has no effect with --load-poses (nothing is registered)\n";
+
+    // Exit code 3 is new; only callers that asked for the new outputs get
+    // it, so an existing script that treats any non-zero exit as a failure
+    // sees exactly what it always did.
+    const bool qc_exit_codes = !save_poses_path.empty() || !load_poses_path.empty() ||
+                               !qc_path.empty() || auto_retry;
+
+    // A review may be run just to fix poses, without fusing anything.
+    if (output_path.empty() && !list_only && !review)
     {
         printUsage(argv[0]);
         return 1;
@@ -423,6 +513,89 @@ int main(int argc, char** argv)
     if (list_only)
         return 0;
 
+    // --- Stored poses: keep only the scans asked for ----------------------
+    Json::Value poses_doc;
+    if (!load_poses_path.empty())
+    {
+        std::string error;
+        if (!readJsonFile(load_poses_path, poses_doc, error))
+        {
+            std::cerr << "Error: " << error << "\n";
+            return 1;
+        }
+        std::unordered_map<std::string, std::string> stored;   // label -> excluded_by
+        for (const auto& [label, excluded] : PoseIO::scanLabels(poses_doc)) stored[label] = excluded;
+
+        std::vector<std::string> requested;
+        if (!scans_arg.empty())
+        {
+            std::string text = scans_arg;
+            if (text[0] == '@')
+            {
+                std::ifstream list(text.substr(1));
+                if (!list) { std::cerr << "Error: cannot open scan list " << text.substr(1) << "\n"; return 1; }
+                std::ostringstream all;
+                all << list.rdbuf();
+                text = all.str();
+            }
+            std::string item;
+            for (char ch : text + ",")
+            {
+                if (ch == ',' || ch == '\n' || ch == '\r' || ch == ' ' || ch == '\t')
+                {
+                    if (!item.empty()) requested.push_back(item);
+                    item.clear();
+                }
+                else item += ch;
+            }
+        }
+        else
+        {
+            // Everything stored; a review also gets the excluded scans, so an
+            // exclusion can be undone.
+            for (const auto& [label, excluded] : stored)
+                if (review || excluded.empty()) requested.push_back(label);
+        }
+
+        std::set<std::string> wanted;
+        for (const auto& label : requested)
+        {
+            const auto it = stored.find(label);
+            if (it == stored.end())
+            {
+                std::cerr << "Error: scan " << label << " is not in " << load_poses_path << "\n";
+                return 1;
+            }
+            if (!it->second.empty() && !review)
+            {
+                std::cerr << "Error: scan " << label << " is excluded in " << load_poses_path
+                          << " (excluded_by: " << it->second << ") - it has no pose to fuse\n";
+                return 1;
+            }
+            wanted.insert(label);
+        }
+
+        std::vector<ScanInput> kept;
+        std::set<std::string> found;
+        for (auto& scan : scans)
+        {
+            if (!wanted.count(scan.shortLabel())) continue;
+            found.insert(scan.shortLabel());
+            kept.push_back(std::move(scan));
+        }
+        for (const auto& label : wanted)
+        {
+            if (!found.count(label))
+            {
+                std::cerr << "Error: scan " << label << " is in the poses file but was not found under --sessions\n";
+                return 1;
+            }
+        }
+        scans = std::move(kept);
+        std::cout << "[poses] " << scans.size() << " scan(s) from " << load_poses_path
+                  << " - registration is skipped\n";
+    }
+
     if (scans.size() < 2)
     {
         std::cerr << "Need at least 2 scans to fuse (found " << scans.size() << ").\n";
@@ -439,6 +612,17 @@ int main(int argc, char** argv)
     params.use_tag_alignment = tag_align;
     if (tag_min_shared) params.tag_min_shared = *tag_min_shared;
     if (tag_max_rmse) params.tag_max_fit_rmse = *tag_max_rmse;
+    if (!load_poses_path.empty())
+    {
+        const double stored_voxel = poses_doc["params"]["scan_voxel"].asDouble();
+        if (stored_voxel > 0.0 && std::abs(stored_voxel - params.voxel_leaf_size) > 1e-9)
+            std::cerr << "  [!] --scan-voxel " << params.voxel_leaf_size << " differs from the "
+                      << stored_voxel << " the poses were registered at - the poses still apply,"
+                         " but the clouds are not the ones that were registered\n";
+        // Fusion alone never looks at the tags, so don't spend time locating
+        // them. A review may re-run coarse alignment, which does.
+        params.use_tag_alignment = review && poses_doc["params"]["tag_align"].asBool();
+    }
 
     // Warn rather than silently disappoint: asking for fused cells finer than
     // the spacing the scans were thinned to cannot add detail, it just splits
@@ -452,6 +636,7 @@ int main(int argc, char** argv)
                      " to hold - lower --scan-voxel too\n";
     }
 
+    int exit_code = 0;
     try
     {
         std::unique_ptr<FusionVisualizer> viewer;
@@ -468,7 +653,8 @@ int main(int argc, char** argv)
         // are no-ops when running headless, which is what keeps the stage
         // machine below identical in GUI and --no-gui runs.
         RoiProvider roi_provider = nullptr;
-        if (viewer && !no_roi)
+        // With stored poses the crop is the one they were registered with.
+        if (viewer && !no_roi && load_poses_path.empty())
         {
             roi_provider = [&viewer](const ScanInput& input, const PointCloudT::ConstPtr& raw,
                                        Eigen::Vector4f& min_pt, Eigen::Vector4f& max_pt) {
@@ -497,6 +683,11 @@ int main(int argc, char** argv)
         // re-entered any number of times without special-casing.
         Stage stage = Stage::Load;
         PointCloudNT::Ptr final_cloud;
+        ReconcileReport fusion_report;
+        bool fused = false;
+
+        // What a review changed, so manual decisions can be recorded as such.
+        std::vector<ScanStatus> status_before_review;
 
         while (stage != Stage::Done)
         {
@@ -504,7 +695,30 @@ int main(int argc, char** argv)
             {
                 case Stage::Load:
                     std::cout << "\n=== Stage: load ===\n";
+                    if (!load_poses_path.empty()) PoseIO::applyPreLoad(session, poses_doc);
                     session.loadAll(progressFor(Stage::Load), roi_provider);
+                    if (!load_poses_path.empty())
+                    {
+                        // Registration is replaced wholesale by the stored result.
+                        std::string error;
+                        if (!PoseIO::applyPoses(session, poses_doc, error))
+                            throw std::runtime_error(load_poses_path + ": " + error);
+                        if (session.countContributing() == 0)
+                            throw std::runtime_error("No stored scan can contribute to the fusion.");
+                        session.printReport("Stored poses (" + load_poses_path + "):");
+                        if (review)
+                        {
+                            session.resolveTagPoses();
+                            for (size_t i = 0; i < session.size(); ++i)
+                                status_before_review.push_back(session.scan(i).status);
+                            stage = Stage::RefineReview;
+                        }
+                        else
+                        {
+                            stage = Stage::Fuse;
+                        }
+                        break;
+                    }
                     if (session.countContributing() == 0)
                         throw std::runtime_error("No scans could be loaded.");
                     stage = Stage::CalibrateTilt;
@@ -548,6 +762,32 @@ int main(int argc, char** argv)
                 case Stage::RefineBatch:
                     std::cout << "\n=== Stage: fine registration ===\n";
                     session.runRefineBatch(progressFor(Stage::RefineBatch));
+                    if (auto_retry)
+                    {
+                        // Checkpoint first. Registration itself is done; retries can
+                        // take long on a bad session, and a caller's timeout would
+                        // otherwise throw the finished registration away with them.
+                        // The flag marks the file as the pre-retry state until the
+                        // final save below replaces it.
+                        session.computeScanQc();
+                        if (!save_poses_path.empty())
+                        {
+                            session.setSessionFlag("auto_retry_incomplete", true);
+                            std::ostringstream command;
+                            for (int i = 0; i < argc; ++i) command << (i ? " " : "") << argv[i];
+                            std::string error;
+                            if (!writeJsonFile(save_poses_path,
+                                               PoseIO::posesDocument(session, RunInfo{command.str(), isoTimestamp()}),
+                                               error))
+                                std::cerr << "  [!] checkpoint not written: " << error << "\n";
+                            else
+                                std::cout << "[retry] checkpoint (pre-retry poses) written to " << save_poses_path << "\n";
+                            session.setSessionFlag("auto_retry_incomplete", false);
+                        }
+                        std::cout << "\n=== Stage: automatic retries ===\n";
+                        session.runAutoRetry(auto_retry_max_scans, progressFor(Stage::RefineBatch));
+                    }
+                    session.computeScanQc();
                     stage = Stage::RefineReview;
                     break;
 
@@ -567,6 +807,7 @@ int main(int argc, char** argv)
 
                 case Stage::Fuse:
                 {
+                    if (output_path.empty()) { stage = Stage::Done; break; }   // a review without -o
                     std::cout << "\n=== Stage: fuse ===\n";
                     const auto contributions = session.buildContributions();
 
@@ -575,10 +816,11 @@ int main(int argc, char** argv)
                         std::cout << "    " << std::fixed << std::setprecision(2)
                                   << c.confidence << "  " << c.label << "\n";
 
-                    ReconcileReport fusion_report;
                     final_cloud = reconcileScans(contributions, reconcile_params,
                                                    session.scenePlane(), &fusion_report);
                     fusion_report.print();
+                    fused = true;
+                    session.computeSessionQc(fusion_report);
 
                     savePLY(output_path, final_cloud);
                     std::cout << "\nSaved fused scan to " << output_path << "\n";
@@ -591,7 +833,59 @@ int main(int argc, char** argv)
             }
         }
 
-        if (viewer && !viewer->stopped() && final_cloud)
+        // --- Review bookkeeping, poses, QC ----------------------------------
+        if (review)
+        {
+            for (size_t i = 0; i < session.size() && i < status_before_review.size(); ++i)
+            {
+                auto& scan = session.scan(i);
+                const bool was = status_before_review[i] == ScanStatus::Excluded;
+                const bool now = scan.status == ScanStatus::Excluded;
+                if (now && !was) scan.excluded_by = "manual";
+                if (!now && was) scan.excluded_by.clear();
+            }
+            session.markReviewed(isoTimestamp());
+        }
+
+        std::ostringstream command;
+        for (int i = 0; i < argc; ++i) command << (i ? " " : "") << argv[i];
+        const RunInfo run{command.str(), isoTimestamp()};
+
+        if (!qc_exit_codes) exit_code = 0;
+        else                exit_code = session.needsReview() ? 3 : 0;
+
+        if (!save_poses_path.empty())
+        {
+            std::string error;
+            if (!writeJsonFile(save_poses_path, PoseIO::posesDocument(session, run), error))
+                throw std::runtime_error(error);
+            std::cout << "Saved poses to " << save_poses_path << " (" << session.reviewState() << ")\n";
+        }
+        if (!qc_path.empty())
+        {
+            std::string error;
+            const std::string mode = load_poses_path.empty() ? "register" : (review ? "review" : "load_poses");
+            if (!writeJsonFile(qc_path, PoseIO::qcDocument(session, run, mode, fused ? &fusion_report : nullptr,
+                                                           reconcile_params, exit_code), error))
+                throw std::runtime_error(error);
+            std::cout << "Saved QC to " << qc_path << "\n";
+        }
+        if (exit_code == 3)
+        {
+            std::cout << "\nNEEDS REVIEW:";
+            for (const auto& f : session.sessionFlags()) std::cout << " [" << f << "]";
+            for (size_t i = 0; i < session.size(); ++i)
+            {
+                const auto& s = session.scan(i);
+                if (!s.needs_review || s.status == ScanStatus::Excluded) continue;
+                std::cout << " " << s.input.shortLabel() << "(";
+                for (size_t r = 0; r < s.qc_reasons.size(); ++r) std::cout << (r ? "," : "") << s.qc_reasons[r];
+                std::cout << ")";
+            }
+            std::cout << "\n";
+        }
+
+        if (viewer && !viewer->stopped() && final_cloud && !review)
             viewer->showFinal(final_cloud);
     }
     catch (const std::exception& e)
@@ -600,5 +894,5 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    return 0;
+    return exit_code;
 }

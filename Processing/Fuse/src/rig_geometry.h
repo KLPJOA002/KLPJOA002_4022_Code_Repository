@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <Eigen/Dense>
 
 // Which axis of the camera frame a rig motion turns about.
@@ -42,6 +44,24 @@ struct RigGeometry
     //                                          fixed in the world)
     bool compose_tilt_first = true;
 
+    // Which way round the IMU's axes sit relative to the frame the point
+    // clouds are written in: "identity", "rx180", "ry180" or "rz180" (see
+    // parseImuFrame), or "auto" to let the tilt calibration choose.
+    //
+    // This is a property of the hardware, not of a session - the IMU is
+    // fixed to the camera - so it is no longer chosen afresh each run. The
+    // choice was unreliable: calibration only uses the reference's rotation
+    // group, where identity and Rx180 differ by a turn about the hinge axis
+    // itself and score within a fraction of a percent of each other. On
+    // Big_Wave 763 and 933 mm that tie broke towards identity, which mis-seeds
+    // every tilted scan of every *rotated* group (whose hinge is a different
+    // camera axis) and left a ghost layer 5-10 mm below the surface. Forcing
+    // Rx180 there: 763 mm all-44 acc_rmse 3.87 -> 1.57 mm, z bias -7.3 ->
+    // -0.3 mm, 25 flagged scans -> 0. Ten of the twelve sessions picked Rx180
+    // by themselves. Calibration still reports its own pick and warns when it
+    // disagrees.
+    std::string imu_frame = "rx180";
+
     bool seedsRotation() const { return rotation_axis != RigAxis::None; }
     bool seedsTilt()     const { return tilt_axis != RigAxis::None; }
 };
@@ -67,6 +87,11 @@ Eigen::Matrix4f rotationAboutPoint(RigAxis axis, float degrees_signed,
 // mathematically convenient one.
 Eigen::Matrix3f rotationBetweenVectors(const Eigen::Vector3f& from,
                                         const Eigen::Vector3f& to);
+
+// IMU-to-cloud frame by name ("identity", "rx180", "ry180", "rz180", case
+// insensitive). Each is the identity or a 180-degree flip about one axis,
+// returned as its diagonal. False for an unknown name (including "auto").
+bool parseImuFrame(const std::string& name, Eigen::Vector3f& diagonal);
 
 Eigen::Matrix4f rigGuess(const RigGeometry& rig,
                           bool have_rotation, double rotation_deg,

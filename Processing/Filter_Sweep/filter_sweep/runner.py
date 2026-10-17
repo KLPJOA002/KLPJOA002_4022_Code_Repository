@@ -71,8 +71,9 @@ def _scan_state(cache_root, scan_key):
 
 def run_job(job: dict) -> dict:
     from .evaluate import StageError, crop_seed_trim_evaluate, reference, stage_scan_folder
-    from .filters import run_config
+    from .filters import depth_gate, run_config
     from .frames import rs_frame_for
+    from .memory import zeroed_malloc_active
 
     s = _W["settings"]
     cfg, scan = job["config"], job["scan"]
@@ -100,6 +101,8 @@ def run_job(job: dict) -> dict:
 
         with open(log_path, "w") as log, contextlib.redirect_stdout(log), contextlib.redirect_stderr(log):
             stage = "filter"
+            if not zeroed_malloc_active():   # never write a row whose filter output may hold stale memory
+                raise RuntimeError("MALLOC_PERTURB_=255 not set in this process (see filter_sweep/memory.py)")
             res = run_config(cache, cfg, sw, s.deprojection)
             points = res.pop("points")
             res["selected_rs_frame"] = rs_frame_for(m, res["best_bag_index"])
@@ -109,6 +112,15 @@ def run_job(job: dict) -> dict:
                 from .evaluate import crop_tool
                 crop_tool.write_ply_like_original(
                     job_dir / "filtered.ply", o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points)))
+
+            stage = "depth_gate"     # after selection, before the crop; every config alike
+            gate = s.raw.get("depth_gate") or {}
+            n_before = len(points)
+            points, removed = depth_gate(points, gate.get("min_valid_depth_m"), gate.get("max_valid_depth_m"))
+            row.update({"depth_gate_min_m": gate.get("min_valid_depth_m"),
+                        "depth_gate_max_m": gate.get("max_valid_depth_m"),
+                        "points_before_depth_gate": n_before, "points_removed_depth_gate": removed,
+                        "frac_removed_depth_gate": removed / n_before if n_before else 0.0})
 
             stage = "crop"
             ply_path = stage_scan_folder(job_dir / "scan", Path(scan["scan_dir"]), res["selected_rs_frame"])
@@ -166,7 +178,7 @@ def write_stage_list(settings, stage: str, configs: list, scans: list):
 
 
 def run_stage(stage: str, settings, workers: int, dry_run=False, retry_failed=False, keep=False,
-              smoke=False, limit_configs=None):
+              smoke=False, limit_configs=None, only_configs=None):
     from .stages import build_smoke, build_stage
     from .config import normalise
 
@@ -187,6 +199,13 @@ def run_stage(stage: str, settings, workers: int, dry_run=False, retry_failed=Fa
     configs = build_smoke(settings) if smoke else build_stage(stage, settings, results, stage_config_ids(settings))
     if limit_configs:
         configs = configs[:limit_configs]
+    if only_configs:
+        wanted = set(only_configs)
+        configs = [c for c in configs if config_id(c) in wanted or config_label(c) in wanted]
+        found = {config_id(c) for c in configs} | {config_label(c) for c in configs}
+        missing = wanted - found
+        if missing:
+            raise SystemExit(f"--configs: not in stage {stage}: {sorted(missing)}")
     write_stage_list(settings, stage, configs, scans)
 
     done = load_rows(settings.out_dir)

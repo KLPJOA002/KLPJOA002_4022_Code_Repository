@@ -185,6 +185,15 @@ bool loadRigConfigFile(const std::string& path, DiscoveryOptions& opts)
         else if (key == "rotation_pattern") opts.rotation_pattern = value;
         else if (key == "compose_tilt_first") opts.rig.compose_tilt_first = parseBool(value, opts.rig.compose_tilt_first);
         else if (key == "reorder_by_tilt") opts.reorder_by_tilt = parseBool(value, opts.reorder_by_tilt);
+        else if (key == "imu_frame")
+        {
+            Eigen::Vector3f unused;
+            if (value != "auto" && !parseImuFrame(value, unused))
+                std::cerr << "  [!] " << path << ":" << line_no << " - unknown imu_frame '" << value
+                          << "' (use identity, rx180, ry180, rz180 or auto), ignoring\n";
+            else
+                opts.rig.imu_frame = value;
+        }
         else std::cerr << "  [!] " << path << ":" << line_no << " - unknown key '" << key << "', ignoring\n";
     }
 

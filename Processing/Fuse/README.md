@@ -241,9 +241,9 @@ at *negative* z in the PLY, while a stationary accelerometer reads specific
 force pointing up at −z, meaning the camera's +z points down, toward the
 surface. Both cannot be true in one frame.
 
-So the relationship is **detected**, not assumed — the four rotations a depth
-export realistically uses are each tried, and whichever makes the tilted scans
-actually line up is kept:
+The calibration measures the relationship from the data, trying the four
+rotations a depth export realistically uses and scoring how well each makes the
+tilted scans line up:
 
 ```
 [tilt] testing how the IMU frame relates to the point clouds:
@@ -265,6 +265,43 @@ Measured directly on one real session, residual against the reference scan:
 
 Only rotations are considered; a mirrored frame would flip handedness and
 break far more than the tilt seed.
+
+#### The frame is a rig constant: `imu_frame` (default `rx180`)
+
+**Default behaviour changed (2026-10-16).** The frame is now taken from the
+rig geometry, `imu_frame = rx180` (rig config key, or `--imu-frame
+identity|rx180|ry180|rz180|auto`), instead of being chosen by the measurement
+above on every run. The IMU is fixed to the camera, so the frame cannot differ
+between sessions, and the measurement cannot reliably tell identity from
+Rx180: calibration only uses the reference's rotation group, where the two
+differ by a turn about the hinge axis itself (see "indistinguishable" below)
+and score within a fraction of a percent of each other.
+
+Within that one group the choice does not matter. Every other rotation group
+sees the hinge along a different camera axis, so there the wrong frame gives
+every tilted scan a wrong seed (20-37% overlap instead of ~90%). ICP then slides
+it onto a parallel layer a few mm below the true surface, and that ghost layer
+survives fusion. That is what happened at Big_Wave 763 and 933 mm, the only two
+of the twelve 3D_Error sessions where the tie broke towards identity:
+
+| Big_Wave, all 44 scans | identity (old auto pick) | Rx180 |
+|---|---|---|
+| 763 mm acc_rmse / z bias | 3.87 / −7.29 mm | 1.57 / −0.28 mm |
+| 763 mm surface thickness (before → after) | 2.21 → 2.11 mm | 1.15 → 0.10 mm |
+| 763 mm flagged scans | 25 | 0 |
+| 933 mm acc_rmse / z bias | 3.53 / −5.91 mm | 2.31 / −0.53 mm |
+
+The calibration still runs and still reports its own pick. When that pick
+differs from the rig's frame it warns, and uses the rig's frame:
+
+```
+  [!] tilt calibration would pick identity (depth frame) (score 0.0022) but the rig's IMU frame
+      is Rx180 - y,z negated (score 0.0022) - using the rig's; the two are effectively tied here
+```
+
+A warning with a large score gap means the rig's frame really is wrong for this
+camera or export. Check it, and set `imu_frame` (or `--imu-frame auto`) to
+match. `--imu-frame auto` restores the old per-run choice.
 
 ### Lever arm
 
@@ -315,10 +352,12 @@ reported **lever arm** should match your rig: if you know the camera sits
 close to the tilt axis and the report claims half a metre, the search range is
 too wide, not the rig surprising you.
 
-Two conventions are sometimes reported as **indistinguishable**, and that is
-honest rather than a failure: conjugating a rotation by a flip about its own
-axis leaves it unchanged, so when the hinge lines up with a camera axis those
-candidates describe the rig equally well and either may be used.
+Two conventions are sometimes reported as **indistinguishable**: conjugating
+a rotation by a flip about its own axis leaves it unchanged, so when the hinge
+lines up with a camera axis those candidates describe the reference's rotation
+group equally well. They do **not** describe the other rotation groups
+equally well, which is why the frame now comes from the rig geometry rather
+than from this measurement (see above).
 
 ## Flat scenes and why alignment scores can lie
 
@@ -538,6 +577,110 @@ scan_tilt-15.ply          0.0   0.0   0.0   0.0  -0.13  0.0   0.99
 
 `--sessions` and `--manifest` are mutually exclusive; the flat-list form is
 always available as a fallback.
+
+## Registering once per session (`--save-poses`, `--load-poses`, `--qc`)
+
+Registration and fusion can be run separately, so a session is registered once
+and fused many times, for example for different subsets of its scans:
+
+```bash
+# Stage 1: register every scan, retry the flagged ones, save poses and QC.
+fuse_scans -o all.ply --sessions S --tag-align --rotation-axis z --scan-voxel 0.0005 --fusion-cell 0.0005 \
+           --auto-retry --save-poses poses.json --qc qc.json --no-gui
+# Stage 2: fuse a subset at the stored poses. No tags, calibration, coarse or ICP.
+fuse_scans -o sub.ply --sessions S --scan-voxel 0.0005 --fusion-cell 0.0005 \
+           --load-poses poses.json --scans r0_a0,r0_a-10,r0_a10,r90_a0 --qc sub_qc.json --no-gui
+# Later: review the stored poses in the viewer, and save them back.
+fuse_scans --sessions S --tag-align --rotation-axis z --scan-voxel 0.0005 \
+           --load-poses poses.json --save-poses poses.json --review
+```
+
+| flag | |
+|---|---|
+| `--save-poses <f>` | after registration (or a review), write every scan's pose, status and QC |
+| `--load-poses <f>` | skip registration and apply the stored poses and statuses. Statuses still decide what is fused |
+| `--scans <list>` / `--scans @file` | with `--load-poses`: fuse only these labels. A label that is not in the file, or is excluded there, is an error |
+| `--qc <f>` | per-scan QC, the fusion report (spreads, cells, points) and the QC thresholds |
+| `--auto-retry` | after fine registration, retry each scan that needs review, in this order: (1) coarse against the full map of all other scans, then refine; (2) the same without its tag pose; (3) if its group is ambiguous or its tags disagree, flip the group and keep the flip only if the summed score improves. It stops at the first rung that clears the scan, keeps the best-scoring pose, and logs every attempt. It never excludes a scan |
+| `--auto-retry-max-scans <n>` | retry at most n scans, worst first (default 12) |
+| `--review` | with `--load-poses` and `--save-poses`: open the viewer on the stored poses at the first flagged scan, and save on exit. `-o` is optional |
+| `--imu-frame <f>` | override the rig's IMU-to-cloud frame (see above) |
+
+**Exit codes.** `0` means clean. `3` means the output was written but a scan or
+the fused surface needs review. Anything else is a failure. Code 3 is only
+returned when one of the flags above is given, so existing callers see no change.
+
+**Labels** are the tilt folder name with the session prefix removed, for example
+`r45_a-5`. They are the same in any staging of the session.
+
+**Stored frame.** Every transform is in the registration's common frame (the
+reference scan, normally `r0_a0`), including subsets that leave the reference
+out. The scene plane is stored too, so height-field fusion uses the same plane as
+the full registration.
+
+### What needs review
+
+`computeScanQc` labels each scan. It changes no pose and excludes nothing.
+
+- **Reasons** (any one puts the session in the review queue): `refine_failed`,
+  `coarse_failed`, `not_aligned`, `no_fine_quality`, `score_ratio` (fine score
+  above `flag_score_ratio` × the median; the existing `flagged` test),
+  `low_coarse_overlap` (coarse overlap below `qc_min_coarse_inlier_fraction`,
+  0.5), `tag_disagreement` (tag and surface poses more than
+  `tag_disagreement_warn_deg` apart, stored on the scan) and `group_ambiguous`.
+- **Warnings** (recorded only): `iteration_cap` and `tag_fit_rejected`.
+- **Session flags**, from the fused result: `spread_after_high` (above
+  `qc_max_spread_after`, 0.5 mm) and `spread_before_high` (above
+  `qc_max_spread_before`, 1.8 mm).
+
+The thresholds come from the twelve all-44 fusions of the 2026-10-08 sweep (0.5 mm
+voxel and cell), where clean sessions and ghost-layer sessions separate cleanly.
+They scale with the fusion cell. A review accepts whatever flags remain:
+`needs_review` becomes false, and `reviewed` is set with a timestamp.
+
+### Schema
+
+`poses.json` (`"schema": "fuse_scans.poses/1"`):
+
+```jsonc
+{ "schema", "tool": {"name", "version": "<git describe>", "built"}, "created", "command",
+  "params": { "scan_voxel", "tag_align", "tag_min_shared", "tag_max_fit_rmse", "use_imu_tilt", "icp_max_iterations",
+              "flag_score_ratio", "rig": {"tilt_axis", "rotation_axis", "imu_frame", ...},
+              "qc": {"min_coarse_inlier_fraction", "max_spread_before_mm", "max_spread_after_mm", ...} },
+  "session": {
+    "name", "reference": "r0_a0",
+    "scene_plane": {"valid", "origin": [3], "basis": [[3]x3], "planarity"},
+    "tilt_calibration": {"valid", "frame", "frame_measured", "frame_forced", "imu_to_cloud": [[3]x3], "pivot": [3],
+                         "residual", "frame_score", "frame_runner_up"},
+    "rotation_groups": [{"name": "r45", "cumulative_deg", "step_sign", "from_tags", "tag_spread_deg",
+                         "resolved", "ambiguous", "margin", "scans": ["r45_a0", ...]}],
+    "flags": ["spread_after_high"], "needs_review",
+    "review": {"state": "clean|needs_review|reviewed", "reviewed_at"},
+    "auto_retry": [{"rung": "flip_group", "group", "score_before", "score_after", "kept"}] },
+  "scans": { "r45_a-5": {
+    "label", "ply", "rotation_group", "status": "refined|reference|coarse|refine-failed|...",
+    "transform": [[4]x4], "coarse_transform": [[4]x4], "seed_transform": [[4]x4] | null, "coarse_source",
+    "coarse_quality": {"rmse_mm", "inlier_fraction", "inliers", "sampled", "score"} | null, "fine_quality": {...} | null,
+    "icp": {"converged", "fitness", "hit_max_iterations"},
+    "tags": {"located", "fit_valid", "fit_rms_mm", "shared", "ids", "fit_transform", "rejected_rms_mm"},
+    "tag_vs_coarse": {"angle_deg", "shift_mm"} | null, "group_ambiguous", "group_margin", "roi": {...} | null,
+    "flagged", "qc_reasons": [...], "warnings": [...], "needs_review",
+    "retry": [{"rung": "coarse_full_map|no_tags|flip_group", "score_before", "score_after", "kept", "cleared"}],
+    "excluded_by": null | "auto" | "manual", "reviewed", "reviewed_at" } } }
+```
+
+`qc.json` (`"schema": "fuse_scans.qc/1"`) has the same header and `params` (plus
+`fusion_cell`), and:
+
+- `mode`: `register`, `load_poses` or `review`;
+- `thresholds`;
+- `scans`: the same per-scan entries, for the scans in this run only;
+- `flagged_scans`;
+- `reconcile`: `mode_used`, `spread_before_mm`, `spread_after_mm`,
+  `input_points`, `cells_total`, `mean_scans_per_cell` and `output_points`;
+- `session_flags`, `review_state`, `needs_review` and `exit_code`.
+
+Infinite or never-measured values are written as `null`.
 
 ## Viewer
 

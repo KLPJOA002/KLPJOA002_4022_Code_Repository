@@ -39,12 +39,16 @@ decoder.
 .venv/bin/python validate.py --scans Big_Wave__863mm__A1,Small_Wave__863mm__B
 ```
 
-Every line should say OK. It checks two things:
+Every line should say OK. It checks three things:
 
 - **Baseline.** With no filters, the sweep must pick rs_marker's own best frame
   and reproduce the `.ply` rs_marker saved, to within 0.001 mm.
 - **Filters.** The Python filter path must match `rs_decode --filters` (the
   system librealsense) bit for bit.
+- **History.** Spatial holes_fill configs must give bit-identical output after
+  other configs have run on the same sensor, as in a sweep worker (see
+  [Changes](#changes-pipeline_version-3)). Best effort: without the fix, stale
+  memory only shows up for some histories.
 
 ## Running
 
@@ -63,7 +67,8 @@ seconds per job once there are results.
   re-running the same command skips finished jobs. `--retry-failed` re-runs the
   failed ones.
 - **Useful flags.** `--workers N`, `--heights 641mm,863mm`, `--scans A1,B`,
-  `--shapes Big_Wave`, `--out DIR`, `--limit-configs N`.
+  `--shapes Big_Wave`, `--out DIR`, `--limit-configs N`,
+  `--configs <config_id or exact label,...>` (only those configs of the stage).
 - **`--keep`.** Keeps each job's folder under `results/jobs/` for inspection:
   `filtered.ply` (the whole selected frame), `trimmed.ply` (what Evaluate
   scored), `seed_transform.txt` and Evaluate's own output.
@@ -160,6 +165,9 @@ Other recording details:
      `best_valid_fraction`, `n_tied_best`, `frames_fed` and `warmup_frames`.
 4. **Point cloud.** It is written in the same frame as rs_marker's
    `export_to_ply` (see [deprojection](#deprojection)).
+   **Depth gate.** Points nearer than `depth_gate.min_valid_depth_m` (0.3 m)
+   are dropped, for every config, and counted (`points_removed_depth_gate`).
+   See [Changes](#changes-pipeline_version-3).
 5. **Crop.** `crop_pointclouds.compute_auto_crop`, run without the preview
    window.
    - **Settings.** Margin 10 px and frame window 15, the same as
@@ -330,6 +338,135 @@ These are not conclusions, only a check that the pipeline works:
 - Hole filling (mode 1) and decimation 2 reduce the trimmed RMSE by about 5%.
 - Temporal smoothing changes RMSE by a few % either way.
 
+## Changes (pipeline_version 3)
+
+Rows from pipeline_version 2 (`results/`, 2026-10-07) have a defect in the
+spatial filter's hole-filling configs. Version 3 fixes it and adds a
+safeguard. Nothing else in the pipeline changed.
+
+### The defect
+
+With `holes_fill` > 0, librealsense's spatial filter does not write the last
+pixels of the image: at the end of the last row, 1, 3, 7 and 15 pixels for
+holes_fill 1–4, and the whole trailing hole (~254 px) for 5. Those output
+pixels keep whatever the memory held before.
+
+- **In a fresh process** that is 0 (no depth). That is why `validate.py` and
+  single reruns looked clean.
+- **In a sweep worker** that had already run other configs on the same scan,
+  it was stale data from them. The worker reuses the software sensor and its
+  memory.
+- **Where it came from.** Measured on Small_Wave 701mm A2: the same input
+  frame gave 0 there after one config and 7101 (0.71 m) after `dec4`.
+  Re-running the stage-1 configs in 8 shuffled worker orders on two scans gave
+  stale pixels in 19 of the 40 holes_fill runs.
+
+The stale pixels did two things:
+
+1. **They counted as valid pixels**, so they could change which frame
+   rs_marker's rule selected. They did in 3 of the 15 holes_fill test rows
+   below.
+2. **They became points.** A near-zero stale depth becomes a point at the
+   camera origin. That lies inside the crop and the part trim, about one
+   camera height from the surface. A synthetic test with the 254 tail pixels
+   set to 5 mm gave RMSE 2.66 → 110.96 mm and max 9 → 659 mm, with the median
+   almost unchanged (1.697 → 1.755). That is the signature of the 7 bad rows
+   (RMSE 9–110 mm). Stale depths of ~0.7 m land in the image corner and are
+   cropped away; they only affect the frame selection.
+
+Only the five stage-1 configs `sp m2 a0.5 d20 h1`..`h5` (300 rows) use
+holes_fill > 0. The stage-2 grid uses holes_fill 0, and stage 3 doesn't vary
+it. The other filters were checked on one scan after 9 different preceding
+configs and were bit-identical every time: baseline, spatial h0, temporal,
+hole filling, decimation.
+
+### Change 1: zero-initialised memory (`filter_sweep/memory.py`)
+
+- **What it does.** `run_sweep.py` and `validate.py` re-execute themselves
+  once with `MALLOC_PERTURB_=255`. glibc then fills every newly allocated block
+  with 0. Workers inherit the setting. A job refuses to run (failed row)
+  without it.
+- **Effect on the data.** The pixels the spatial filter leaves unwritten are
+  always 0 (no depth), as in a fresh process and as the system-librealsense
+  comparison expects.
+- **Why it is justified.** The unwritten pixels hold no measurement, so 0 is
+  the only correct value. With the fix, the 40 runs above were all
+  bit-identical to a fresh process, and selected the same frames.
+- **What it does not change.** Every pixel a filter actually writes, the
+  selection rule, the filters, Evaluate and the configs.
+
+### Change 2: physical depth gate (`depth_gate` in `sweep_config.yaml`)
+
+- **What it does.** After best-frame selection and before the crop, points
+  with depth < 0.3 m are dropped. This applies identically to every config,
+  baseline included.
+- **Why 0.3 m.** The D455/D456 cannot measure closer than ~0.52 m (MinZ at
+  1280×720). The cameras sit 641–933 mm above the table. No point in any of
+  the 60 rs_marker baseline clouds is closer than 592.8 mm.
+- **No upper gate (`null`).** 16-bit depth at 0.1 mm cannot exceed 6.55 m, and
+  real background is part of what the cropper sees.
+- **What it does not change.** Selection still counts all non-zero pixels, as
+  rs_marker does.
+- **New columns.** `points_before_depth_gate`, `points_removed_depth_gate`,
+  `frac_removed_depth_gate`, `depth_gate_min_m`, `depth_gate_max_m`.
+- **Role.** With change 1 it is expected to remove nothing. A non-zero count is
+  a warning sign, not a routine correction.
+
+### Measured effect (test subset, `results_v3_test/`)
+
+The subset was 8 configs (baseline, `sp m2 a0.5 d20 h0`..`h5`,
+`tp a0.1 d20 p3`) on 3 scans (Small_Wave 701mm A2, Big_Wave 701mm A2,
+Big_Wave 763mm A3). The new rows are compared with the version-2 rows by
+(config_id, scan_key).
+
+- **The gate removed 0 points in all 24 rows**, baseline included.
+- **18 rows had no stale pixels**: same frame, same valid-pixel count. Their
+  filtered clouds are identical to the old ones (0 points differ). Their
+  metrics differ only by the crop's run-to-run noise:
+  - |ΔRMSE| ≤ 0.00016 mm
+  - |Δmedian| ≤ 0.003 mm
+  - |ΔF@2mm| ≤ 0.0002
+  - The same code run twice differs by the same amount (crop ±24 points).
+    That noise is in `../Crop` and is not new.
+- **6 rows had stale pixels in the old run:**
+
+| config | scan | frame old→new | RMSE mm | median mm | max mm | F@2mm | coverage | scored |
+|---|---|---|---|---|---|---|---|---|
+| h1 | Big_Wave 763 A3 | 150→150 | 8.654 → 2.206 | 1.397 → 1.396 | 716.5 → 9.1 | 0.590 → 0.590 | 0.9955 → 0.9955 | 7331 → 7330 |
+| h3 | Small_Wave 701 A2 | 108→108 | 2.595 → 2.595 | 1.646 → 1.646 | 8.06 → 8.06 | 0.477 → 0.477 | 0.9994 → 0.9994 | 8740 → 8740 |
+| h4 | Big_Wave 763 A3 | 112→108 | 31.28 → 2.170 | 1.430 → 1.451 | 694.0 → 9.9 | 0.597 → 0.603 | 0.9978 → 0.9970 | 7420 → 7349 |
+| h5 | Big_Wave 701 A2 | 149→149 | 105.16 → 2.236 | 1.696 → 1.653 | 632.4 → 7.9 | 0.546 → 0.553 | 0.9999 → 0.9999 | 9182 → 8928 |
+| h5 | Big_Wave 763 A3 | 131→124 | 2.185 → 2.388 | 1.377 → 1.530 | 9.87 → 7.78 | 0.626 → 0.564 | 0.9989 → 0.9956 | 7384 → 7403 |
+| h5 | Small_Wave 701 A2 | 112→138 | 110.06 → 2.656 | 1.704 → 1.697 | 654.7 → 8.95 | 0.481 → 0.476 | 0.9989 → 0.9937 | 8992 → 8704 |
+
+What the table shows:
+
+- **Same frame.** The median moves by at most 0.043 mm.
+- **Changed frame.** The median moves by up to 0.15 mm. That is a different
+  frame, not removed data.
+- **Old rows that looked normal were wrong too.** In two of the six (h3 on
+  Small_Wave 701 A2, h5 on Big_Wave 763 A3) the old RMSE was in the normal
+  range. The second also had a wrong frame: its corrected RMSE is *worse*
+  (2.19 → 2.39 mm).
+- **Consequence.** All 300 holes_fill rows of version 2 should be replaced,
+  not only the 7 with large RMSE.
+
+### Not fixed here: the decoder's librealsense version
+
+The machine now has librealsense **2.58.4** as its system library, and
+`decoder/build/rs_decode` links it. Every cached scan was decoded with it
+(`decoder: rs_decode 2.58.4`). The frame map then fell back to the "timing
+estimate" method, because 2.58's align marks ~1.5% more pixels valid than
+rs_marker's 2.57 (see [Why a C++ decoder](#why-a-c-decoder)). As a result:
+
+- In version 2, the baseline selected rs_marker's own best frame in **2 of 60**
+  scans.
+- `validate.py`'s baseline and filter checks fail on this machine. They fail
+  the same way with the committed (pre-version-3) code; the filter check fails
+  because 2.58 cannot open the ROS1 `.db3` files.
+
+The version-3 changes neither cause nor fix this.
+
 ## Code
 
 | file | |
@@ -346,3 +483,4 @@ These are not conclusions, only a check that the pipeline works:
 | `filter_sweep/stages.py` | stage → configs |
 | `filter_sweep/runner.py` | jobs, multiprocessing, failure rows |
 | `filter_sweep/results.py` | results table, registration check, ranking |
+| `filter_sweep/memory.py` | zero-initialised memory for the filters (`MALLOC_PERTURB_=255`) |

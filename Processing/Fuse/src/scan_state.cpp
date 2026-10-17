@@ -20,6 +20,17 @@ const char* toString(ScanStatus status)
     return "?";
 }
 
+bool parseScanStatus(const std::string& text, ScanStatus& out)
+{
+    for (ScanStatus s : { ScanStatus::Pending, ScanStatus::Reference, ScanStatus::CoarseAligned,
+                          ScanStatus::CoarseFailed, ScanStatus::Refined, ScanStatus::RefineFailed,
+                          ScanStatus::Excluded })
+    {
+        if (text == toString(s)) { out = s; return true; }
+    }
+    return false;
+}
+
 bool contributesToFusion(ScanStatus status)
 {
     // Coarse-only scans still contribute: they are positioned well enough

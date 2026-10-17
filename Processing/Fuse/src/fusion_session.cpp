@@ -1,6 +1,7 @@
 #include "fusion_session.h"
 
 #include <algorithm>
+#include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <cmath>
@@ -63,6 +64,20 @@ FusionSession::FusionSession(std::vector<ScanInput> inputs, PipelineParams param
         scans_.push_back(std::move(state));
     }
     buildRotationGroups();
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::setRigGeometry(const RigGeometry& rig)
+{
+    rig_ = rig;
+    rig_known_ = true;
+    Eigen::Vector3f diagonal;
+    if (parseImuFrame(rig_.imu_frame, diagonal))
+    {
+        tilt_calibration_.imu_to_cloud = diagonal.asDiagonal();
+        tilt_calibration_.frame_name = rig_.imu_frame;
+        tilt_calibration_.frame_forced = true;
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -405,6 +420,7 @@ void FusionSession::loadAll(const ProgressFn& progress, const RoiProvider& roi)
             std::cerr << "  [!] " << scan.label() << " failed to load: " << e.what()
                       << " - excluding it from this run\n";
             scan.status = ScanStatus::Excluded;
+            scan.excluded_by = "auto";
             continue;
         }
     }
@@ -490,7 +506,7 @@ VoxelMap FusionSession::buildMap(size_t exclude_index, size_t max_index) const
 // -------------------------------------------------------------------------
 void FusionSession::solveTagPoses()
 {
-    for (auto& scan : scans_) scan.tag_fit = TagFit{};
+    for (auto& scan : scans_) { scan.tag_fit = TagFit{}; scan.tag_rejected_rms = -1.0; }
     if (reference_index_ >= scans_.size()) return;
 
     // Running sums of each placed tag's corners in the common frame, so a tag
@@ -566,6 +582,7 @@ void FusionSession::solveTagPoses()
             : fitTags(scan.tags, placed, params_.tag_min_shared);
         if (!fit.valid || fit.rms > params_.tag_max_fit_rmse)
         {
+            if (fit.valid) scan.tag_rejected_rms = fit.rms;
             std::cout << "  [i] tag fit for " << scan.label() << " leaves " << mm(fit.rms)
                       << "mm corner error - not trusted\n";
             continue;
@@ -633,6 +650,7 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
     computeGeometricCoarseFor(index, map);
 
     auto& scan = scans_[index];
+    scan.has_tag_disagreement = false;
     if (!params_.use_tag_alignment || !scan.tag_fit.valid) return;
 
     // ...then the tag pose, put to the same test.
@@ -661,6 +679,10 @@ void FusionSession::computeCoarseFor(size_t index, const PointCloudT::ConstPtr& 
         const double angle = Eigen::AngleAxisf(Eigen::Matrix3f(delta.topLeftCorner<3, 3>())).angle();
         const double shift = (fit.transform.topRightCorner<3, 1>() -
                               scan.coarse_transform.topRightCorner<3, 1>()).norm();
+        // Kept for QC and the review, not just printed.
+        scan.has_tag_disagreement = true;
+        scan.tag_disagreement_deg = angle * 180.0 / M_PI;
+        scan.tag_disagreement_shift = shift;
         std::cout << " (poses differ by " << std::fixed << std::setprecision(1)
                   << angle * 180.0 / M_PI << " deg, camera " << mm(shift) << "mm)";
     }
@@ -1155,6 +1177,39 @@ void FusionSession::calibrateImuTiltGeometry(const std::vector<size_t>& calibrat
         {
             runner_up = score;
         }
+    }
+
+    // What the data alone would choose is kept for the record either way...
+    tilt_calibration_.measured_frame_name = best_name;
+    tilt_calibration_.frame_forced = false;
+
+    // ...but a frame given in the rig geometry wins. It is a hardware fact
+    // (the IMU is fixed to the camera), and the measurement above cannot
+    // reliably separate identity from Rx180 - see RigGeometry::imu_frame.
+    Eigen::Vector3f forced_diagonal;
+    if (rig_known_ && parseImuFrame(rig_.imu_frame, forced_diagonal))
+    {
+        const Eigen::Matrix3f forced = forced_diagonal.asDiagonal();
+        std::string forced_name = rig_.imu_frame;
+        double forced_score = best;
+        for (const auto& candidate : candidates)
+            if (candidate.diagonal == forced_diagonal) forced_name = candidate.name;
+        if (!forced.isApprox(best_frame))
+        {
+            // Score the configured frame on its own for the warning.
+            tilt_calibration_.imu_to_cloud = forced;
+            Eigen::Vector3f unused;
+            forced_score = searchTiltPivot(calibration_scans, /*levels=*/2, unused);
+            std::cerr << "  [!] tilt calibration would pick " << best_name << " (score "
+                      << std::fixed << std::setprecision(4) << best << ") but the rig's IMU frame is "
+                      << forced_name << " (score " << forced_score << ") - using the rig's"
+                      << (forced_score < best * 1.05 ? "; the two are effectively tied here" : "")
+                      << "\n";
+        }
+        best_frame = forced;
+        best_name = forced_name;
+        best = forced_score;
+        tilt_calibration_.frame_forced = true;
     }
 
     tilt_calibration_.imu_to_cloud = best_frame;
@@ -2088,4 +2143,309 @@ void FusionSession::printReport(const std::string& title) const
 
     std::cout << "  " << countContributing() << " of " << scans_.size()
               << " scan(s) currently contributing to the fused cloud\n";
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::computeScanQc()
+{
+    // The same batch median updateFlags judges against, so "score_ratio"
+    // here and `flagged` there always agree.
+    std::vector<double> scores;
+    for (const auto& s : scans_)
+        if (s.status == ScanStatus::Refined && s.fine_quality.valid())
+            scores.push_back(s.fine_quality.score());
+    double median = 0.0;
+    if (!scores.empty())
+    {
+        std::sort(scores.begin(), scores.end());
+        median = scores[scores.size() / 2];
+    }
+    const bool compare_to_batch = scores.size() >= 3;
+
+    for (size_t i = 0; i < scans_.size(); ++i)
+    {
+        auto& s = scans_[i];
+        s.qc_reasons.clear();
+        s.qc_warnings.clear();
+        s.needs_review = false;
+        if (s.status == ScanStatus::Excluded || i == reference_index_) continue;
+
+        // Reasons: any one of these sends the session to the review queue.
+        switch (s.status)
+        {
+            case ScanStatus::Pending:      s.qc_reasons.push_back("not_aligned"); break;
+            case ScanStatus::CoarseFailed: s.qc_reasons.push_back("coarse_failed"); break;
+            case ScanStatus::RefineFailed: s.qc_reasons.push_back("refine_failed"); break;
+            case ScanStatus::Refined:
+                if (!s.fine_quality.valid())
+                    s.qc_reasons.push_back("no_fine_quality");
+                else if (compare_to_batch && s.fine_quality.score() > params_.flag_score_ratio * median)
+                    s.qc_reasons.push_back("score_ratio");
+                break;
+            default: break;
+        }
+        if (s.coarse_quality.valid() &&
+            s.coarse_quality.inlier_fraction < params_.qc_min_coarse_inlier_fraction)
+            s.qc_reasons.push_back("low_coarse_overlap");
+        if (s.has_tag_disagreement && s.tag_disagreement_deg > params_.tag_disagreement_warn_deg)
+            s.qc_reasons.push_back("tag_disagreement");
+        const int group = rotationGroupOf(i);
+        if (group >= 0 && rotation_groups_[group].ambiguous)
+            s.qc_reasons.push_back("group_ambiguous");
+
+        // Warnings: recorded, but not on their own a reason to review. At a
+        // 0.5 mm scan voxel ICP routinely runs to its iteration cap on scans
+        // that end up well placed (Big_Wave 641 mm: 5 such, fused fine).
+        if (s.icp_result.hit_max_iterations) s.qc_warnings.push_back("iteration_cap");
+        if (s.tag_rejected_rms >= 0.0)       s.qc_warnings.push_back("tag_fit_rejected");
+
+        // A review that saved this scan has accepted it as it stands.
+        s.needs_review = !s.qc_reasons.empty() && !s.reviewed;
+    }
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::computeSessionQc(const ReconcileReport& report)
+{
+    session_flags_.clear();
+    if (report.spread_before > params_.qc_max_spread_before) session_flags_.push_back("spread_before_high");
+    if (report.spread_after  > params_.qc_max_spread_after)  session_flags_.push_back("spread_after_high");
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::setSessionFlag(const std::string& flag, bool on)
+{
+    const auto it = std::find(session_flags_.begin(), session_flags_.end(), flag);
+    if (on && it == session_flags_.end()) session_flags_.push_back(flag);
+    if (!on && it != session_flags_.end()) session_flags_.erase(it);
+}
+
+// -------------------------------------------------------------------------
+bool FusionSession::needsReview() const
+{
+    if (!session_flags_.empty() && reviewed_at_.empty()) return true;
+    return std::any_of(scans_.begin(), scans_.end(), [](const ScanState& s) {
+        return s.needs_review && s.status != ScanStatus::Excluded;
+    });
+}
+
+std::string FusionSession::reviewState() const
+{
+    if (!reviewed_at_.empty()) return "reviewed";
+    return needsReview() ? "needs_review" : "clean";
+}
+
+void FusionSession::markReviewed(const std::string& timestamp)
+{
+    reviewed_at_ = timestamp;
+    for (auto& s : scans_)
+    {
+        s.reviewed = true;
+        s.reviewed_at = timestamp;
+        s.needs_review = false;
+    }
+}
+
+// -------------------------------------------------------------------------
+PointCloudT::Ptr FusionSession::coarseMapExcluding(const std::vector<size_t>& excluded) const
+{
+    VoxelMap map(params_.retry_coarse_voxel);
+    for (size_t j = 0; j < scans_.size(); ++j)
+    {
+        if (std::find(excluded.begin(), excluded.end(), j) != excluded.end()) continue;
+        const auto& o = scans_[j];
+        if (o.loaded() && contributesToFusion(o.status)) map.add(*o.prepared, nullptr, o.transform);
+    }
+    return map.cloud();
+}
+
+void FusionSession::coarseAlignThinned(size_t index, const PointCloudT::ConstPtr& coarse_map)
+{
+    auto& scan = scans_[index];
+    // computeCoarseFor reads the scan's own cloud, so it is swapped for a
+    // thinned copy for the duration and always put back.
+    const PointCloudT::Ptr full = scan.prepared;
+    struct Restore { ScanState& s; PointCloudT::Ptr cloud; ~Restore() { s.prepared = cloud; } } restore{scan, full};
+    scan.prepared = voxelDownsample(full, params_.retry_coarse_voxel);
+    computeCoarseFor(index, coarse_map);
+    scan.transform = scan.coarse_transform;
+}
+
+// -------------------------------------------------------------------------
+void FusionSession::runAutoRetry(size_t max_scans, const ProgressFn& progress)
+{
+    computeScanQc();
+
+    std::vector<size_t> candidates;
+    for (size_t i = 0; i < scans_.size(); ++i)
+    {
+        const auto& s = scans_[i];
+        if (i != reference_index_ && s.loaded() && s.status != ScanStatus::Excluded && s.needs_review)
+            candidates.push_back(i);
+    }
+    if (candidates.empty())
+    {
+        std::cout << "[retry] nothing flagged - no retries needed\n";
+        return;
+    }
+
+    // Worst first: outright failures, then by how badly the current pose
+    // scores, so a capped budget is spent where it matters most.
+    auto badness = [this](size_t i) {
+        const auto& s = scans_[i];
+        if (s.status == ScanStatus::RefineFailed || s.status == ScanStatus::CoarseFailed)
+            return std::numeric_limits<double>::max();
+        const auto& q = s.fine_quality.valid() ? s.fine_quality : s.coarse_quality;
+        return q.score();
+    };
+    std::stable_sort(candidates.begin(), candidates.end(),
+                     [&](size_t a, size_t b) { return badness(a) > badness(b); });
+    if (candidates.size() > max_scans)
+    {
+        std::cout << "[retry] " << candidates.size() << " scans flagged; retrying the worst "
+                  << max_scans << " (--auto-retry-max-scans), the rest go to review as they are\n";
+        candidates.resize(max_scans);
+    }
+
+    // Restores a scan's registration state but keeps its retry log.
+    auto restore = [this](size_t i, const ScanState& saved) {
+        auto log = std::move(scans_[i].retries);
+        scans_[i] = saved;
+        scans_[i].retries = std::move(log);
+    };
+
+    std::vector<bool> group_tried(rotation_groups_.size(), false);
+
+    for (size_t k = 0; k < candidates.size(); ++k)
+    {
+        const size_t i = candidates[k];
+        auto& scan = scans_[i];
+        if (progress) progress(k, candidates.size(), scan.label());
+        if (!scan.needs_review) continue;   // cleared by an earlier group flip
+
+        // One map of every other scan, shared by every rung, so the scores
+        // they are kept or rejected on are directly comparable.
+        const VoxelMap map = buildMap(i, scans_.size());
+        if (map.empty()) continue;
+        const auto map_cloud = map.cloud();
+        const auto coarse_map_cloud = coarseMapExcluding({i});
+        auto score = [&]() { return scoreAlignment(scan.prepared, map_cloud, scan.transform).score(); };
+
+        auto placeAgainstMap = [&]() {
+            coarseAlignThinned(i, coarse_map_cloud);
+            if (scan.status == ScanStatus::CoarseAligned) refineAgainst(i, map);
+        };
+
+        auto attempt = [&](const std::string& rung, const std::function<void()>& run) {
+            const ScanState saved = scan;
+            ScanState::RetryAttempt a;
+            a.rung = rung;
+            a.score_before = score();
+            const auto started = std::chrono::steady_clock::now();
+            run();
+            const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+            a.score_after = score();
+            a.kept = contributesToFusion(scan.status) && a.score_after < a.score_before;
+            if (!a.kept) restore(i, saved);
+            updateFlags();
+            computeScanQc();
+            a.cleared = a.kept && scan.qc_reasons.empty();
+            scan.retries.push_back(a);
+            std::cout << "[retry] " << scan.label() << "  " << rung << ": score "
+                      << mm(a.score_before) << " -> " << mm(a.score_after)
+                      << (a.kept ? "  kept" : "  rejected")
+                      << (scan.qc_reasons.empty() ? "  (QC clear)" : "")
+                      << "  [" << std::fixed << std::setprecision(0) << seconds << " s]\n";
+            return scan.qc_reasons.empty();
+        };
+
+        if (attempt("coarse_full_map", placeAgainstMap)) continue;
+
+        if (params_.use_tag_alignment && scan.tag_fit.valid)
+        {
+            const bool cleared = attempt("no_tags", [&]() {
+                const TagFit tags = scan.tag_fit;
+                scan.tag_fit.valid = false;
+                placeAgainstMap();
+                scan.tag_fit = tags;
+            });
+            if (cleared) continue;
+        }
+
+        const int g = rotationGroupOf(i);
+        const bool group_suspect = g > 0 &&
+            (rotation_groups_[g].ambiguous ||
+             (scan.has_tag_disagreement && scan.tag_disagreement_deg > params_.tag_disagreement_warn_deg));
+        if (!group_suspect || group_tried[g]) continue;
+        group_tried[g] = true;
+
+        // Flipping group g moves it and every later group, so all of those
+        // are re-placed, each against a fixed map of the groups that do not
+        // move - the same map before and after, so the sums compare.
+        std::vector<size_t> moved;
+        for (size_t h = static_cast<size_t>(g); h < rotation_groups_.size(); ++h)
+            for (size_t j : rotation_groups_[h].scans)
+                if (j != reference_index_ && scans_[j].loaded() && scans_[j].status != ScanStatus::Excluded)
+                    moved.push_back(j);
+        VoxelMap fixed(mapLeafSize());
+        for (size_t j = 0; j < scans_.size(); ++j)
+        {
+            const auto& o = scans_[j];
+            if (std::find(moved.begin(), moved.end(), j) != moved.end()) continue;
+            if (o.loaded() && contributesToFusion(o.status))
+                fixed.add(*o.prepared, o.normals.get(), o.transform);
+        }
+        if (fixed.empty()) continue;
+        const auto fixed_cloud = fixed.cloud();
+        const auto fixed_coarse_cloud = coarseMapExcluding(moved);
+        auto groupScore = [&]() {
+            double total = 0.0;
+            for (size_t j : moved)
+            {
+                const auto q = scoreAlignment(scans_[j].prepared, fixed_cloud, scans_[j].transform);
+                total += q.valid() ? std::min(q.score(), 10.0) : 10.0;  // capped as in the direction test
+            }
+            return total;
+        };
+
+        GroupRetry gr;
+        gr.group = rotation_groups_[g].name;
+        gr.score_before = groupScore();
+        const auto saved_groups = rotation_groups_;
+        std::vector<ScanState> saved_scans;
+        for (size_t j : moved) saved_scans.push_back(scans_[j]);
+
+        flipRotationGroup(static_cast<size_t>(g));
+        for (size_t j : moved)
+        {
+            coarseAlignThinned(j, fixed_coarse_cloud);
+            if (scans_[j].status == ScanStatus::CoarseAligned) refineAgainst(j, fixed);
+        }
+        gr.score_after = groupScore();
+        gr.kept = gr.score_after < gr.score_before;
+        if (!gr.kept)
+        {
+            rotation_groups_ = saved_groups;
+            for (size_t m = 0; m < moved.size(); ++m) restore(moved[m], saved_scans[m]);
+        }
+        updateFlags();
+        computeScanQc();
+
+        ScanState::RetryAttempt a;
+        a.rung = "flip_group";
+        a.score_before = gr.score_before;
+        a.score_after = gr.score_after;
+        a.kept = gr.kept;
+        a.cleared = gr.kept && scan.qc_reasons.empty();
+        scan.retries.push_back(a);
+        group_retries_.push_back(gr);
+        std::cout << "[retry] flip " << gr.group << ": summed score " << std::fixed << std::setprecision(4)
+                  << gr.score_before << " -> " << gr.score_after << (gr.kept ? "  kept" : "  rejected") << "\n";
+    }
+
+    updateFlags();
+    computeScanQc();
+    size_t still = 0;
+    for (const auto& s : scans_) still += s.needs_review ? 1 : 0;
+    std::cout << "[retry] " << still << " scan(s) still need review after retries\n";
 }

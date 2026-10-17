@@ -121,6 +121,11 @@ struct TiltCalibration
     Eigen::Matrix3f imu_to_cloud = Eigen::Matrix3f::Identity();
     double          frame_score = 0.0;      // residual with the chosen frame
     double          frame_runner_up = 0.0;  // residual with the next best
+
+    // The frame the residuals alone picked, and whether the rig geometry's
+    // imu_frame overrode it (frame_name is then the rig's, not this one).
+    std::string     measured_frame_name;
+    bool            frame_forced = false;
     bool rejected = false;   // fitted, but the fit did not explain the motion
     int  samples = 0;
 
@@ -235,7 +240,9 @@ public:
 
     void printRotationReport() const;
 
-    void setRigGeometry(const RigGeometry& rig) { rig_ = rig; rig_known_ = true; }
+    // A rig with a fixed imu_frame applies it straight away, so the IMU tilt
+    // seeds use it even when the calibration stage does not run.
+    void setRigGeometry(const RigGeometry& rig);
     void setUseImuTilt(bool use) { use_imu_tilt_ = use; }
     bool usingImuTilt() const { return use_imu_tilt_; }
     const RigGeometry& rigGeometry() const { return rig_; }
@@ -278,7 +285,81 @@ public:
     // Per-scan metrics table for the review stages.
     void printReport(const std::string& title) const;
 
+    // --- Quality control and unattended runs ----------------------------
+
+    // Re-derives every scan's qc_reasons / qc_warnings / needs_review from
+    // what registration recorded (see PipelineParams::qc_* and the reasons
+    // listed in computeScanQc's body). Labels only - changes no pose.
+    void computeScanQc();
+
+    // Session-level flags from the fused result: a thick fused surface is
+    // the direct signature of a misplaced scan stacking a second layer.
+    void computeSessionQc(const ReconcileReport& report);
+
+    const std::vector<std::string>& sessionFlags() const { return session_flags_; }
+
+    // Sets or clears one session flag by name (e.g. "auto_retry_incomplete"
+    // on the checkpoint written before the retries start).
+    void setSessionFlag(const std::string& flag, bool on);
+
+    // True if any scan still in the session needs review, or a session flag
+    // is set and no review has accepted it. Decides exit code 3.
+    bool needsReview() const;
+
+    // "clean", "needs_review" or "reviewed".
+    std::string reviewState() const;
+
+    // After a --review pass: stamps the session (and every scan it saved)
+    // as reviewed, which accepts whatever flags remain.
+    void markReviewed(const std::string& timestamp);
+
+    // Automatic retries for scans that need review, after the refine batch.
+    // For each (worst first, at most `max_scans`), tried in order until its
+    // QC clears, keeping whichever pose scores best against one fixed map of
+    // every other scan:
+    //   1. coarse_full_map  re-run coarse alignment against the whole map,
+    //                       not just the scans before it, then refine
+    //   2. no_tags          the same without its tag pose, so the rig seed or
+    //                       feature matching places it
+    //   3. flip_group       if its rotation group is ambiguous or its tags
+    //                       disagree with the surface: flip the group, re-place
+    //                       every scan it moves, keep only if their summed
+    //                       score improves
+    // Every attempt is logged on the scan (ScanState::retries). Nothing is
+    // ever excluded here: a scan that stays flagged keeps its best pose and
+    // needs_review.
+    void runAutoRetry(size_t max_scans, const ProgressFn& progress = nullptr);
+
+    // Re-chains the tag poses from the current transforms. A session
+    // restored from a poses file needs this before coarse alignment can
+    // use the tags again (in --review).
+    void resolveTagPoses() { if (params_.use_tag_alignment) solveTagPoses(); }
+
+    // Session-level retry log (group flips), for the poses / QC files.
+    struct GroupRetry
+    {
+        std::string group;
+        double score_before = 0.0;
+        double score_after = 0.0;
+        bool   kept = false;
+    };
+    const std::vector<GroupRetry>& groupRetries() const { return group_retries_; }
+
 private:
+    // Reads and writes the poses / QC files (pose_io.cpp), which need the
+    // calibration, the groups and the scene plane - state that is otherwise
+    // only ever derived, never set from outside.
+    friend struct PoseIO;
+
+    // The retry ladder's coarse step: every contributing scan except
+    // `excluded`, merged at retry_coarse_voxel, and a coarse alignment of
+    // one scan run on a thinned copy of its cloud against such a map.
+    PointCloudT::Ptr coarseMapExcluding(const std::vector<size_t>& excluded) const;
+    void coarseAlignThinned(size_t index, const PointCloudT::ConstPtr& coarse_map);
+
+    std::vector<std::string> session_flags_;
+    std::vector<GroupRetry>  group_retries_;
+    std::string              reviewed_at_;   // empty until a --review saves
     // Union of contributing scans other than `exclude_index`, optionally
     // limited to indices below `max_index` (which is what makes a batch
     // sequential: each scan aligns against what came before it, giving
