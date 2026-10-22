@@ -192,6 +192,39 @@ def test_roi_crops_in_the_oriented_frame(textured):
     assert a.gstats["footprint_y_mm"] == pytest.approx(80, abs=2)
 
 
+# --- grid choice and sparsity --------------------------------------------------
+def clustered_points(spacing=1.5e-3, per_site=3, jitter=0.3e-3, seed=11):
+    """Like a TSDF-extracted cloud: a few points within a fraction of the
+    real sampling of each other, so the median nearest neighbour is tiny."""
+    rng = np.random.default_rng(seed)
+    site = S.lattice_xy(0.2, 0.16, spacing)
+    xy = np.repeat(site, per_site, axis=0) + rng.uniform(-jitter, jitter, (len(site) * per_site, 2))
+    return np.column_stack([xy, S.sinusoid(xy, 1e-3, 20e-3)])
+
+
+def test_auto_grid_follows_density_not_clusters():
+    a = run(clustered_points())
+    assert a.prep.nn_spacing < 0.5e-3
+    assert a.prep.spacing == pytest.approx(1.5e-3 / np.sqrt(3), rel=0.1)
+    assert a.gstats["valid_fraction"] > 0.9
+    assert a.gstats["quad_fraction"] > 0.9
+    assert "SPARSE" not in flags(a)
+
+
+def test_auto_grid_on_a_lattice_is_twice_the_spacing():
+    a = run(sinusoid_points(spacing=0.5e-3))
+    assert a.prep.geom.g == pytest.approx(1.0e-3)
+
+
+def test_speckle_map_is_flagged_sparse():
+    # A grid well below the real sampling (the old median-nearest-neighbour
+    # rule): most cells empty, every empty cell connected to the outside.
+    a = run(clustered_points(), grid_mm=0.7)
+    assert a.gstats["valid_fraction"] < 0.8
+    assert a.gstats["quad_fraction"] < 0.5
+    assert "SPARSE" in flags(a)
+
+
 # --- orientation -------------------------------------------------------------
 def test_tilted_camera_frame_is_levelled():
     A, L = 1e-3, 20e-3

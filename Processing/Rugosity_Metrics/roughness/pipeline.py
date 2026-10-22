@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from scipy import ndimage
 
 from scan_eval import log as L
 from scan_eval.log import log, stage, warn
@@ -28,9 +29,9 @@ from scan_eval.pipeline import load_scan
 from scan_eval.report import append_results, write_json
 
 from .detrend import TrendFit, fit_trend
-from .grid import FillPlan, GridGeometry, apply_fill, cell_counts, cell_means, plan_fill
+from .grid import EIGHT, FillPlan, GridGeometry, apply_fill, cell_counts, cell_means, plan_fill
 from .metrics import area_metrics, footprint, height_metrics, surface_metrics
-from .orient import Frame, crop, orient, point_spacing, round_sig
+from .orient import Frame, areal_spacing, crop, orient, point_spacing, round_sig
 from .params import DETREND_ORDERS
 
 # Columns that lead every roughness_results.csv row, in this order; all other
@@ -38,7 +39,7 @@ from .params import DETREND_ORDERS
 LEAD_COLUMNS = ["timestamp", "label", "scan", "detrend", "primary", "grid_mm", "Sq_mm", "Sa_mm",
                 "Ssk", "Sku", "Sdr_pct", "rugosity", "Sdq", "Sal_mm", "Str", "Std_deg",
                 "dominant_wavelength_mm", "dominant_direction_deg", "hurst", "fractal_dimension",
-                "valid_fraction", "interpolated_fraction", "footprint_x_mm", "footprint_y_mm",
+                "valid_fraction", "quad_fraction", "interpolated_fraction", "footprint_x_mm", "footprint_y_mm",
                 "n_points", "Sq_noisecorr_mm", "Sq_ci95_lo_mm", "Sq_ci95_hi_mm", "flags", "seed"]
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -50,7 +51,8 @@ class Prepared:
     frame: Frame
     geom: GridGeometry
     n_loaded: int
-    spacing: float            # median xy point spacing, m
+    spacing: float            # areal xy point spacing (sqrt of area per point), m
+    nn_spacing: float         # median xy nearest-neighbour distance, m
     grid_auto: bool
     crop_info: dict
     all_points: np.ndarray    # oriented, before the crop (for the ROI preview)
@@ -85,11 +87,15 @@ def prepare(source, params, rng, grid: float | None = None, reference=None) -> P
     oriented, frame = orient(points, params)
 
     stage("crop")
-    spacing = point_spacing(oriented[:, :2], rng)
+    nn = point_spacing(oriented[:, :2], rng)
+    spacing = areal_spacing(oriented[:, :2], nn)
     auto = grid is None and not params.grid_mm
     g = grid or (params.grid_mm * 1e-3 if params.grid_mm else round_sig(2 * spacing * 1e3) * 1e-3)
-    log(f"[grid] median point spacing {spacing * 1e3:.3f} mm -> grid {g * 1e3:g} mm"
-        f"{' (auto: 2 x spacing)' if auto else ''}")
+    log(f"[grid] point spacing {spacing * 1e3:.3f} mm (median nearest neighbour {nn * 1e3:.3f} mm) "
+        f"-> grid {g * 1e3:g} mm{' (auto: 2 x spacing)' if auto else ''}")
+    if spacing > 2 * nn:
+        log(f"[grid] the points come in clusters (nearest neighbour {nn * 1e3:.3f} mm, but one point per "
+            f"{spacing * 1e3:.3f} mm on average): a grid below ~{2 * spacing * 1e3:.2g} mm leaves most cells empty")
     if g < 0.5 * spacing:
         warn(f"grid {g * 1e3:g} mm is finer than half the point spacing ({spacing * 1e3:.3f} mm): "
              "most cells will be empty or hold a single noisy point")
@@ -115,7 +121,7 @@ def prepare(source, params, rng, grid: float | None = None, reference=None) -> P
                          f"need >= {params.min_grid_cells} across the short side. Use a smaller "
                          f"--grid-mm (<= {min(geom.nx, geom.ny) * g * 1e3 / params.min_grid_cells:.3g}) "
                          "or a larger ROI")
-    return Prepared(pts, frame, geom, len(points), spacing, auto, info, oriented, keep, alignment)
+    return Prepared(pts, frame, geom, len(points), spacing, nn, auto, info, oriented, keep, alignment)
 
 
 def _quiet(fn, *args):
@@ -151,6 +157,17 @@ def detrend_all(pts, params, methods):
     return out
 
 
+def quad_fraction(valid):
+    """Fraction of the valid cells that are a corner of at least one complete
+    2 x 2 quad: the cells the area and slope metrics (rugosity, Sdr, Sdq) see."""
+    q = valid[:-1, :-1] & valid[1:, :-1] & valid[:-1, 1:] & valid[1:, 1:]
+    seen = np.zeros_like(valid)
+    for sy in (slice(None, -1), slice(1, None)):
+        for sx in (slice(None, -1), slice(1, None)):
+            seen[sy, sx] |= q
+    return float(seen.sum() / max(valid.sum(), 1))
+
+
 def grid_all(pts, residuals: dict, geom: GridGeometry, params):
     """Bin every method's residual onto the shared grid. Returns (maps, valid,
     counts, plan, stats)."""
@@ -166,16 +183,22 @@ def grid_all(pts, residuals: dict, geom: GridGeometry, params):
         maps[m] = apply_fill(h, plan)
     valid = np.isfinite(next(iter(maps.values())))
     fx, fy = footprint(valid, geom.g)
+    # plan.footprint only counts holes enclosed by measured cells. On a grid
+    # too fine for the points, the empty cells form one network open to the
+    # border, so they would not count and a speckle map would look 100% valid.
+    # Closing first bridges those gaps.
+    closed = ndimage.binary_fill_holes(ndimage.binary_closing(measured, EIGHT, iterations=2)) | plan.footprint
     stats = {
         "grid_mm": geom.g * 1e3, "grid_nx": geom.nx, "grid_ny": geom.ny,
-        "valid_fraction": float(valid.sum() / max(plan.footprint.sum(), 1)),
+        "valid_fraction": float(valid.sum() / max(closed.sum(), 1)),
+        "quad_fraction": quad_fraction(valid),
         "interpolated_fraction": float((valid & plan.fill).sum() / max(valid.sum(), 1)),
         "holes_filled": plan.n_holes_filled, "holes_left": plan.n_holes_left,
         "footprint_x_mm": fx * 1e3, "footprint_y_mm": fy * 1e3,
         "points_per_cell_mean": float(counts[measured].mean()),
     }
-    log(f"[grid] {valid.sum()} valid cells of {plan.footprint.sum()} in the footprint "
-        f"({stats['valid_fraction']:.1%}); {plan.n_holes_filled} small hole(s) interpolated "
+    log(f"[grid] {valid.sum()} valid cells of {closed.sum()} in the footprint "
+        f"({stats['valid_fraction']:.1%}, {stats['quad_fraction']:.1%} in complete 2 x 2 quads); {plan.n_holes_filled} small hole(s) interpolated "
         f"({stats['interpolated_fraction']:.2%} of valid cells), {plan.n_holes_left} larger hole(s) "
         f"masked; {stats['points_per_cell_mean']:.1f} points / cell")
     log(f"[grid] footprint {stats['footprint_x_mm']:.1f} x {stats['footprint_y_mm']:.1f} mm")
@@ -377,11 +400,14 @@ def analyse(source, params, noise: NoiseModel | None = None, reference=None) -> 
     trend_maps = {m: np.where(valid, trends[m][0].evaluate(CX, CY), np.nan) for m in methods}
     noise_info = noise.for_grid(g, counts, valid, rng) if noise and noise.active() else None
     grid_warns = list(prep.alignment["warnings"]) if prep.alignment else []
-    if gstats["valid_fraction"] < 0.8:
+    if gstats["valid_fraction"] < 0.8 or gstats["quad_fraction"] < 0.8:
+        few = gstats["quad_fraction"] < 0.5
         grid_warns.append(("SPARSE", f"only {gstats['valid_fraction']:.0%} of the footprint's cells are "
-                           f"valid at {g * 1e3:g} mm ({gstats['points_per_cell_mean']:.1f} points / cell): "
-                           "masked cells weaken the spatial and multi-scale metrics - try a coarser "
-                           f"--grid-mm (e.g. {round_sig(2 * g * 1e3):g})"))
+                           f"valid at {g * 1e3:g} mm ({gstats['points_per_cell_mean']:.1f} points / cell) and "
+                           f"{gstats['quad_fraction']:.0%} of them are in complete 2 x 2 quads: "
+                           + ("rugosity, Sdr and Sdq rest on a few scattered quads and are NOT meaningful"
+                              if few else "masked cells weaken the area, spatial and multi-scale metrics")
+                           + f" - use a coarser --grid-mm (e.g. {round_sig(2 * g * 1e3):g})"))
 
     stage("metrics")
     results, curves, aux, warns = {}, {}, {}, {}
@@ -503,7 +529,8 @@ def process_scan(scan_path, params, out_root, run_name, noise: NoiseModel | None
         timestamp = _dt.datetime.now().isoformat(timespec="seconds")
         scan_level = {
             "n_points_loaded": prep.n_loaded, "n_points": len(pts),
-            "point_spacing_mm": prep.spacing * 1e3, "grid_auto": prep.grid_auto,
+            "point_spacing_mm": prep.spacing * 1e3, "nn_spacing_mm": prep.nn_spacing * 1e3,
+            "grid_auto": prep.grid_auto,
             "tilt_removed_deg": prep.frame.tilt_deg, "plane_rms_mm": prep.frame.plane_rms * 1e3,
             "roi_mm": ",".join(f"{v:g}" for v in params.roi_mm) if params.roi_mm else "",
             "roi_polygon_mm": (";".join(f"{x:g},{y:g}" for x, y in params.roi_polygon_mm)

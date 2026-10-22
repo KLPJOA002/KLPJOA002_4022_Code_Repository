@@ -134,6 +134,24 @@ def point_spacing(xy: np.ndarray, rng, n_query: int = 20000) -> float:
     return float(np.median(d))
 
 
+def areal_spacing(xy: np.ndarray, nn: float, probe_factor: float = 20.0) -> float:
+    """Spacing from the point density, sqrt(area per point), never below the
+    nearest-neighbour spacing `nn`. Fused (TSDF) clouds put several points
+    within a fraction of a voxel of each other, so their median nearest
+    neighbour is far below the real sampling and a grid built on it is mostly
+    empty. The density is the median count over interior cells of a coarse
+    probe grid (20 x nn), so the border and stray points don't dilute it."""
+    from scipy import ndimage
+    p = probe_factor * nn
+    ij = np.floor((xy - xy.min(axis=0)) / p).astype(np.int64)
+    n = ij.max(axis=0) + 1
+    counts = np.bincount(ij[:, 1] * n[0] + ij[:, 0], minlength=int(n[0] * n[1])).reshape(n[1], n[0])
+    occupied = counts > 0
+    interior = ndimage.binary_erosion(occupied, structure=np.ones((3, 3), bool))
+    c = counts[interior] if interior.any() else counts[occupied]
+    return max(nn, float(p / np.sqrt(np.median(c))))
+
+
 def round_sig(x: float, digits: int = 2) -> float:
     if x <= 0:
         return x

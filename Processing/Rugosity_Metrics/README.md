@@ -107,8 +107,17 @@ reference for such a part still has the holes.
   footprint that is only a few wavelengths long, so it may be fitting real bedforms.
 * **grid**: the mean z per cell. Interior holes ≤ `--max-hole-cells` across are linearly
   interpolated and counted; larger holes and the exterior stay masked. The auto grid is
-  2 × median point spacing. On randomly scattered clouds this leaves empty cells, which
-  raises a `SPARSE` flag; use `--grid-mm` then.
+  2 × the point spacing, taken from the point density (√ area per point), not the nearest
+  neighbour: fused (TSDF) clouds come in tight clusters of ~3 points, so their nearest
+  neighbour is a fraction of the real sampling and a grid built on it is mostly empty.
+  `SPARSE` is raised when < 80 % of the footprint's cells are valid or < 80 % of them sit
+  in a complete 2 × 2 quad (`quad_fraction`); below 50 % rugosity / Sdr / Sdq are not meaningful.
+* **Comparing scans: fix the grid.** Rugosity, Sdr, Sdq and the slopes depend on the cell size:
+  a coarse cell averages noise away and measures slope over a longer base. The auto grid
+  follows each scan's density (single captures ≈ 2 mm, fused ≈ 1 mm), so a single and a fused
+  scan land on different grids and are not comparable. Pass one `--grid-mm` to every scan
+  that is compared; a batch with mixed grids prints a warning. On a near-flat bed rugosity is
+  ≈ 1 + Sdq²/2, so it barely moves off 1: report `Sdr_pct` or `Sdq` to separate such scans.
 
 ## Conventions worth knowing
 
@@ -117,6 +126,8 @@ reference for such a part still has the holes.
 | `Sq_mm` … `Sz_mm`, `Ssk`, `Sku` | ISO 25178 height parameters; `Sv` is positive |
 | `rugosity`, `Sdr_pct` | true area of a 2-triangles-per-quad mesh / projected area; `Sdr = (rugosity-1)·100` |
 | `Sdq`, `slope_mean_deg` | RMS gradient (dimensionless) and mean slope angle |
+| `valid_fraction`, `quad_fraction` | valid cells / footprint (holes and gaps closed); share of valid cells in at least one complete 2 × 2 quad, i.e. what the area and slope metrics see |
+| `point_spacing_mm`, `nn_spacing_mm` | √ area per point (drives the auto grid); median nearest-neighbour distance |
 | `Sal_mm`, `Str` | fastest ACF decay to s = 0.2 (sub-cell interpolated); `Str` = Sal / slowest decay in the central lobe. `Str_bounded` = the lobe reaches the edge of the usable lags, so Str is an upper bound |
 | `dominant_wavelength_mm`, `dominant_direction_deg` | 2D PSD peak; the direction is the **wave vector** (ripple migration axis), 0–180° CCW from +x |
 | `Std_deg` | **lay / crest** direction (wave-vector angle of the angular-spectrum maximum + 90°); resolution is limited by the k-grid (a few degrees) |

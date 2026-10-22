@@ -120,7 +120,8 @@ def build_parser():
     c.add_argument("--edge-trim-mm", type=float, metavar="MM",
                    help="drop points within this distance of the scan's outer border (default 0)")
     c.add_argument("--grid-mm", type=float, metavar="MM",
-                   help="height-map cell size (default 0 = auto, 2 x median point spacing)")
+                   help="height-map cell size (default 0 = auto, 2 x point spacing). Rugosity, Sdr and Sdq "
+                        "depend on it: compare scans at one fixed --grid-mm")
     c.add_argument("--max-hole-cells", type=int, metavar="N",
                    help="interpolate interior holes up to N cells across (default 2); larger stay masked")
     c.add_argument("--min-points-per-cell", type=int, metavar="N",
@@ -359,6 +360,12 @@ def main(argv=None):
         order = {m: i for i, m in enumerate(DETREND_ORDERS)}
         rows.sort(key=lambda r: (str(r["scan"]), order[r["detrend"]]))
         print_summary(rows)
+        grids = sorted({round(float(r["grid_mm"]), 6) for r in rows})
+        if len(grids) > 1:
+            warn(f"this batch used different grids ({', '.join(f'{g:g}' for g in grids)} mm): rugosity, Sdr, "
+                 "Sdq and the slopes depend on the cell size (a coarse cell averages noise away and "
+                 "measures slope over a longer base), so they are not comparable across these scans. "
+                 f"Rerun with one --grid-mm (e.g. {max(grids):g}) to compare them")
         if rows:
             batch = out_root / "roughness_batch_summary.csv"
             batch.unlink(missing_ok=True)

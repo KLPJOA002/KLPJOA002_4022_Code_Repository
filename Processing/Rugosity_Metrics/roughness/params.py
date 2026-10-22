@@ -116,9 +116,12 @@ class RoughnessParams:
     detrend_warn_fraction: float = 0.25
 
     # --- Gridding -------------------------------------------------------------
-    # Height-map cell size, mm. 0 = automatic: 2 x the median xy point
-    # spacing, rounded to 2 significant figures, so most cells hold several
-    # points and the cell mean averages down sensor noise.
+    # Height-map cell size, mm. 0 = automatic: 2 x the xy point spacing
+    # (sqrt of the area per point, which unlike the nearest-neighbour distance
+    # is not fooled by fused clouds whose points come in tight clusters),
+    # rounded to 2 significant figures, so most cells hold several points and
+    # the cell mean averages down sensor noise. Rugosity / Sdr / Sdq depend on
+    # the cell size, so scans that are compared need the same fixed value.
     grid_mm: float = 0.0
     # Interior holes up to this many cells across are filled by linear
     # interpolation (and counted); bigger holes stay masked out. Holes open
