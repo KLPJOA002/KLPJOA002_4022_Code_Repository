@@ -17,14 +17,26 @@ units = "m"                # the scan PLYs: RealSense and Fuse output are metres
 scale = 1.0
 
 [orientation]
+# orient_mode = "plane"    # plane | none (keep the input frame); default: none with a reference
 sensor_origin = "0,0,0"    # camera position in the scan frame (mm); "none" for scans
                            # already aligned into a reference frame
 inplane_axis  = "input"    # input (camera x projected on the bed) | pca (long axis)
 orient_clip_sigma  = 3.0
 orient_iterations  = 5
 
+[alignment]               # moving the scan onto the reference, in this order
+# transform = "roughness_out/<run>/transform.txt"
+# flip = false
+# rotate_deg = 0.0
+# shift_mm = [0.0, 0.0, 0.0]
+# refine = false
+# align_corr_mm = 5.0
+# adjust = false           # move it by hand in a window
+
 [crop]
-# roi_mm = [-150.0, -100.0, 150.0, 100.0]  # x0, y0, x1, y1 in the levelled frame
+# roi_mm = [-150.0, -100.0, 150.0, 100.0]  # x0, y0, x1, y1 in the analysis frame
+# roi_polygon_mm = [[0, 0], [100, 0], [50, 80]]
+# pick_roi = true          # draw it by hand; saved to <run>/roi.toml
 edge_trim_mm = 0.0         # fused scans often curl at the border: try 5-15
 
 [detrend]
@@ -67,8 +79,11 @@ noise_warn_fraction = 0.5
 footprint_wavelengths_min = 5.0
 
 # [validation]
-# reference_def = "../Evaluate/surfaces/egg_carton.toml"
+# reference_def = "../Evaluate/References/PYRAMID_2X2.stl"   # or a height-field .toml
 # reference_units = "mm"
+# reference_crop = "footprint"   # footprint | none
+# reference_inset_mm = 0.0
 
 [plots]
 write_plots = true
+# profile_y_mm = 0.0       # y of the profile cut in the detrend / reference plots

@@ -1,6 +1,6 @@
 """One scan through the stages:
 
-    load -> orient -> crop/ROI -> detrend -> grid -> metrics -> write
+    load -> [align] -> orient -> crop/ROI -> detrend -> grid -> metrics -> [validate] -> write
 
 Every detrend method gets the same orientation, crop and grid geometry; only
 the polynomial removed differs, so their rows compare like for like.
@@ -53,11 +53,17 @@ class Prepared:
     spacing: float            # median xy point spacing, m
     grid_auto: bool
     crop_info: dict
+    all_points: np.ndarray    # oriented, before the crop (for the ROI preview)
+    keep: np.ndarray          # crop mask over all_points
+    alignment: dict | None = None   # scan -> reference moves and checks (align.align)
 
 
-def prepare(source, params, rng, grid: float | None = None) -> Prepared:
+def prepare(source, params, rng, grid: float | None = None, reference=None) -> Prepared:
     """Load (a .ply path, or an (n, 3) array in metres), orient and crop.
-    `grid` (m) overrides the grid choice, e.g. to match a noise scan to a scan."""
+    `grid` (m) overrides the grid choice, e.g. to match a noise scan to a scan.
+    With a reference and reference_crop = "footprint" only the scan over the
+    reference's outline is kept. With pick_roi the ROI is drawn by hand and
+    written into `params` (pass a copy)."""
     stage("load")
     if isinstance(source, np.ndarray):
         points = np.asarray(source, dtype=float)
@@ -67,6 +73,14 @@ def prepare(source, params, rng, grid: float | None = None) -> Prepared:
     else:
         points = load_scan(source, params.units, params.scale)
         log(f"[scan] {Path(source).name}: {len(points)} points")
+    alignment = None
+    moves = params.transform or params.flip or params.rotate_deg or (
+        params.shift_mm is not None and np.any(params.shift_mm))
+    if reference is not None or moves:
+        stage("align")
+        from .align import align
+        title = "array" if isinstance(source, np.ndarray) else Path(source).name
+        points, alignment = align(points, params, reference, rng, title)
     stage("orient")
     oriented, frame = orient(points, params)
 
@@ -79,7 +93,15 @@ def prepare(source, params, rng, grid: float | None = None) -> Prepared:
     if g < 0.5 * spacing:
         warn(f"grid {g * 1e3:g} mm is finer than half the point spacing ({spacing * 1e3:.3f} mm): "
              "most cells will be empty or hold a single noisy point")
-    keep, info = crop(oriented, params, g)
+    region = None
+    if reference is not None and params.reference_crop == "footprint":
+        scan_ref = oriented @ frame.R + frame.centroid
+        region = reference.region_mask(scan_ref, -params.reference_inset_mm * 1e-3)
+    if params.pick_roi:
+        from . import roi
+        title = "array" if isinstance(source, np.ndarray) else Path(source).name
+        params.roi_mm, params.roi_polygon_mm = roi.pick(oriented, g, region, title, params.roi_mm)
+    keep, info = crop(oriented, params, g, region)
     pts = oriented[keep]
     if len(pts) < 100:
         raise ValueError(f"only {len(pts)} points left after the crop - too few for roughness "
@@ -93,7 +115,7 @@ def prepare(source, params, rng, grid: float | None = None) -> Prepared:
                          f"need >= {params.min_grid_cells} across the short side. Use a smaller "
                          f"--grid-mm (<= {min(geom.nx, geom.ny) * g * 1e3 / params.min_grid_cells:.3g}) "
                          "or a larger ROI")
-    return Prepared(pts, frame, geom, len(points), spacing, auto, info)
+    return Prepared(pts, frame, geom, len(points), spacing, auto, info, oriented, keep, alignment)
 
 
 def _quiet(fn, *args):
@@ -193,7 +215,8 @@ class NoiseModel:
 
 def noise_floor(path, params, g, rng):
     log(f"[noise] processing flat scan {path} at grid {g * 1e3:g} mm (primary detrend {params.primary})")
-    p2 = dataclasses.replace(params, roi_mm=None)
+    p2 = dataclasses.replace(params, roi_mm=None, roi_polygon_mm=None, pick_roi=False, transform=None,
+                             flip=False, rotate_deg=0.0, shift_mm=None, refine=False, adjust=False)
     prep = _quiet(prepare, path, p2, rng, g)
     fit = fit_trend(prep.points, params.primary, params.detrend_clip_sigma, params.detrend_iterations)
     r = prep.points[:, 2] - fit.evaluate(prep.points[:, 0], prep.points[:, 1])
@@ -328,23 +351,32 @@ class Analysis:
     aux: dict             # method -> arrays for plots (mean-removed height map, PSD, ACF)
     warns: dict           # method -> [(code, text)]
     validation: dict | None
+    params: object        # the parameters actually used (with a picked ROI filled in)
+    raw_map: np.ndarray   # cell-mean height before detrending, m (NaN invalid)
+    trend_maps: dict      # method -> fitted trend surface on the grid, m (NaN invalid)
 
 
 def analyse(source, params, noise: NoiseModel | None = None, reference=None) -> Analysis:
     """Stages load .. metrics for a .ply path or an (n, 3) array (metres)."""
+    params = dataclasses.replace(params)          # a picked ROI must not leak into the next scan
     rng = np.random.default_rng(params.seed)
     methods, primary = params.methods, params.primary
     noise = noise or NoiseModel(params)
-    prep = prepare(source, params, rng)
+    prep = prepare(source, params, rng, reference=reference)
     pts, geom, g = prep.points, prep.geom, prep.geom.g
 
     stage("detrend")
     trends = detrend_all(pts, params, methods)
 
     stage("grid")
-    maps, valid, counts, plan, gstats = grid_all(pts, {m: t[1] for m, t in trends.items()}, geom, params)
+    maps, valid, counts, plan, gstats = grid_all(pts, {"_raw": pts[:, 2], **{m: t[1] for m, t in trends.items()}},
+                                                 geom, params)
+    raw_map = maps.pop("_raw")
+    cx, cy = geom.centres()
+    CX, CY = np.meshgrid(cx, cy)
+    trend_maps = {m: np.where(valid, trends[m][0].evaluate(CX, CY), np.nan) for m in methods}
     noise_info = noise.for_grid(g, counts, valid, rng) if noise and noise.active() else None
-    grid_warns = []
+    grid_warns = list(prep.alignment["warnings"]) if prep.alignment else []
     if gstats["valid_fraction"] < 0.8:
         grid_warns.append(("SPARSE", f"only {gstats['valid_fraction']:.0%} of the footprint's cells are "
                            f"valid at {g * 1e3:g} mm ({gstats['points_per_cell_mean']:.1f} points / cell): "
@@ -387,7 +419,7 @@ def analyse(source, params, noise: NoiseModel | None = None, reference=None) -> 
     if reference is not None:
         stage("validate")
         from .validate import compare_to_reference
-        validation = compare_to_reference(reference, prep, valid, params, methods, results)
+        validation = compare_to_reference(reference, prep, valid, params, methods, results, raw_map)
         for m in methods:
             warns[m] += validation["warnings"]
 
@@ -396,7 +428,7 @@ def analyse(source, params, noise: NoiseModel | None = None, reference=None) -> 
             warn(f"{m}: {text}" if len(methods) > 1 else text)
 
     return Analysis(prep, trends, maps, valid, gstats, noise_info, results, curves, aux, warns,
-                    validation)
+                    validation, params, raw_map, trend_maps)
 
 
 # --- one scan ----------------------------------------------------------------
@@ -415,6 +447,7 @@ def process_scan(scan_path, params, out_root, run_name, noise: NoiseModel | None
     try:
         log(f"\n######## {scan_path}  ->  {run_dir}")
         A = analyse(scan_path, params, noise, reference)
+        params = A.params
         prep, geom, pts = A.prep, A.prep.geom, A.prep.points
         trends, results, curves, aux, warns = A.trends, A.results, A.curves, A.aux, A.warns
         gstats, noise_info, validation = A.gstats, A.noise, A.validation
@@ -426,6 +459,16 @@ def process_scan(scan_path, params, out_root, run_name, noise: NoiseModel | None
             write_curves(run_dir, m, curves[m])
         written = [f"heightmap_<method>.npy ({', '.join(methods)}, mm, NaN = invalid)",
                    "psd_<method>.csv", "multiscale_<method>.csv"]
+        if prep.alignment:
+            from .align import reference_name, write_transform
+            write_transform(run_dir / "transform.txt", prep.alignment["matrix"], scan_path,
+                            reference_name(reference) if reference is not None else "none", prep.alignment)
+            written.append("transform.txt")
+        if params.pick_roi and (params.roi_mm or params.roi_polygon_mm):
+            from .roi import write_roi_toml
+            write_roi_toml(run_dir / "roi.toml", params.roi_mm, params.roi_polygon_mm, scan_path,
+                           params.orientation)
+            written.append("roi.toml")
         if params.write_plots:
             from . import plots
             title = Path(scan_path).name
@@ -435,11 +478,26 @@ def process_scan(scan_path, params, out_root, run_name, noise: NoiseModel | None
             plots.plot_detrend_comparison(run_dir / "detrend_comparison.png",
                                           {m: aux[m]["h"] * 1e3 for m in methods}, results, extent,
                                           f"{title}  -  detrend comparison", primary)
+            plots.plot_roi_preview(run_dir / "roi_preview.png", prep, params,
+                                   f"{title}  -  evaluated area")
+            y_row = plots.profile_row(A.valid, geom, params.profile_y_mm)
+            plots.plot_detrend_explained(run_dir / "detrend_explained.png", A.raw_map, A.trend_maps,
+                                         {m: aux[m]["h"] for m in methods}, geom, y_row,
+                                         f"{title}  -  what each detrend removes", primary)
+            plots.plot_detrend_metrics(run_dir / "detrend_metrics.png", results, methods, primary,
+                                       validation and validation["columns"],
+                                       f"{title}  -  metrics by detrend method")
+            if validation:
+                plots.plot_reference_comparison(run_dir / "reference_comparison.png", validation["_aux"],
+                                                aux[primary]["h"], A.raw_map, geom, y_row, primary,
+                                                f"{title}  -  scan vs reference ({primary} detrend)")
             plots.plot_psd(run_dir / "psd.png", aux[primary], curves[primary], results[primary],
                            f"{title}  -  {primary} detrend")
             plots.plot_multiscale(run_dir / "multiscale.png", curves[primary]["multiscale"],
                                   f"{title}  -  {primary} detrend, scale dependence")
-            written.append("heightmap_<method>.png, detrend_comparison.png, psd.png, multiscale.png")
+            written.append("heightmap_<method>.png, roi_preview.png, detrend_comparison.png, "
+                           "detrend_explained.png, detrend_metrics.png, psd.png, multiscale.png"
+                           + (", reference_comparison.png" if validation else ""))
         log(f"[write] {'; '.join(written)}")
 
         timestamp = _dt.datetime.now().isoformat(timespec="seconds")
@@ -448,6 +506,15 @@ def process_scan(scan_path, params, out_root, run_name, noise: NoiseModel | None
             "point_spacing_mm": prep.spacing * 1e3, "grid_auto": prep.grid_auto,
             "tilt_removed_deg": prep.frame.tilt_deg, "plane_rms_mm": prep.frame.plane_rms * 1e3,
             "roi_mm": ",".join(f"{v:g}" for v in params.roi_mm) if params.roi_mm else "",
+            "roi_polygon_mm": (";".join(f"{x:g},{y:g}" for x, y in params.roi_polygon_mm)
+                               if params.roi_polygon_mm else ""),
+            "orientation": params.orientation,
+            **({k: prep.alignment[k] for k in ("align_median_dz_mm", "align_rms_dz_mm", "align_height_corr",
+                                               "align_coverage") if k in prep.alignment}
+               | {"align_auto_placed": prep.alignment["auto_placed"],
+                  "align_refined": prep.alignment["refined"], "align_adjusted": prep.alignment["adjusted"],
+                  "align_moved_mm": prep.alignment["moved_mm"]}
+               if prep.alignment else {}),
             "edge_trim_mm": params.edge_trim_mm,
         }
         scan_level.update(gstats)
@@ -455,12 +522,14 @@ def process_scan(scan_path, params, out_root, run_name, noise: NoiseModel | None
             "timestamp": timestamp, "label": params.label, "scan": str(scan_path),
             "scan_sha256": file_sha256(scan_path), "run_dir": str(run_dir), "seed": params.seed,
             "parameters": params.to_dict(), "versions": versions(),
+            "alignment": prep.alignment and {k: v for k, v in prep.alignment.items() if k != "warnings"},
             "orientation": prep.frame.as_dict(), "crop": prep.crop_info, "grid": geom.as_dict(),
             "scan_summary": scan_level, "noise": noise_info, "primary_detrend": primary,
             "detrend": {m: trends[m][0].as_dict() | trends[m][2] for m in methods},
             "metrics": results, "curves": curves,
             "warnings": {m: [{"code": c, "text": t} for c, t in warns[m]] for m in methods},
-            "validation": validation and {k: v for k, v in validation.items() if k != "warnings"},
+            "validation": validation and {k: v for k, v in validation.items()
+                                          if k != "warnings" and not k.startswith("_")},
             "elapsed_s": round(time.time() - started, 2),
         }
         write_json(run_dir / "metrics.json", document)

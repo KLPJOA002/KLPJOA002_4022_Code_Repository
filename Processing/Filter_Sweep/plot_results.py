@@ -6,6 +6,7 @@ at any time without re-running the sweep.
   plot_results.py                         all figures into results/plots/
   plot_results.py --results results_validation
   plot_results.py --include-suspect       also use rows that failed the registration check
+  plot_results.py --csv-only              only write plots/baseline_vs_best.csv
 
 Figures (PNG + PDF):
   one_factor_overview        stage 1: change of every key metric vs baseline, per filter parameter
@@ -15,6 +16,8 @@ Figures (PNG + PDF):
                              magnitude (rows) and spatial delta (cols), one figure per
                              (temporal delta, persistence); cell = mean change vs baseline
   baseline_vs_best           baseline vs best configuration, per shape and height
+                             (+ baseline_vs_best.csv: those scans with a `selection` column
+                             1_baseline / 2_best_overall / 3_best_per_group, for rsplot)
 Tables:
   summary_best_per_metric.csv/.md   best configuration for each key metric (all stages)
   ranking_<stage>.csv               configurations ranked by the main metric
@@ -284,6 +287,42 @@ def plot_heatmaps(ok, stage2, base_id, out, shapes):
 
 # --- comparison & tables ---------------------------------------------------------------------
 
+SELECTIONS = ["1_baseline", "2_best_overall", "3_best_per_group"]   # numbered: legend order
+
+
+def best_per_group(dsh, base_id, metric) -> dict:
+    """{height_mm: config_id} of the best non-baseline configuration per height of one shape."""
+    per_group = {}
+    for h, g in dsh.groupby("height_mm"):
+        r = rank_configs(g.assign(**{f"{metric}_rel": relative(g, metric, base_id, dsh)}), metric)
+        r = r[r["config_id"] != base_id]
+        if len(r):
+            per_group[h] = r.iloc[0]["config_id"]
+    return per_group
+
+
+def best_selection(ok, base_id, best_id, shapes, metric) -> pd.DataFrame:
+    """The scans behind baseline_vs_best, one copy per role in column `selection`
+    (a configuration can be both best overall and best for a height)."""
+    parts = []
+    for shape in shapes:
+        dsh = ok[ok["shape"] == shape]
+        per_group = best_per_group(dsh, base_id, metric)
+        best_here = dsh["height_mm"].map(per_group)
+        for sel, keep in zip(SELECTIONS, [dsh["config_id"] == base_id, dsh["config_id"] == best_id,
+                                          dsh["config_id"] == best_here]):
+            parts.append(dsh[keep].assign(selection=sel))
+    out = pd.concat(parts, ignore_index=True) if parts else ok.iloc[:0].assign(selection=[])
+    return out.assign(selected_config=out["config_label"], rank_metric=metric)
+
+
+def export_baseline_vs_best(ok, base_id, best_id, out, shapes, metric):
+    out.mkdir(parents=True, exist_ok=True)
+    sel = best_selection(ok, base_id, best_id, shapes, metric)
+    sel.to_csv(out / "baseline_vs_best.csv", index=False)
+    print(f"wrote {out / 'baseline_vs_best.csv'} ({len(sel)} rows)")
+
+
 def plot_baseline_vs_best(ok, base_id, best_id, best_label, out, shapes, metric):
     metrics = [m for m in ["acc_rmse_mm", "signed_std_mm", "fscore@2mm", "covered_fraction"] if m in ok]
     fig, axes = plt.subplots(len(metrics), len(shapes), figsize=(4.4 * len(shapes), 2.3 * len(metrics)),
@@ -291,13 +330,7 @@ def plot_baseline_vs_best(ok, base_id, best_id, best_label, out, shapes, metric)
     for j, shape in enumerate(shapes):
         dsh = ok[ok["shape"] == shape]
         heights = sorted(dsh["height_mm"].unique())
-        # best per (shape, height) by the main metric
-        per_group = {}
-        for h, g in dsh.groupby("height_mm"):
-            r = rank_configs(g.assign(**{f"{metric}_rel": relative(g, metric, base_id, dsh)}), metric)
-            r = r[r["config_id"] != base_id]
-            if len(r):
-                per_group[h] = r.iloc[0]["config_id"]
+        per_group = best_per_group(dsh, base_id, metric)     # best per (shape, height)
         for i, m in enumerate(metrics):
             ax = axes[i, j]
             for k, (label, colour, pick) in enumerate([
@@ -364,6 +397,8 @@ def main():
     p.add_argument("--config")
     p.add_argument("--results", help="results folder (default: out_dir from the config)")
     p.add_argument("--include-suspect", action="store_true")
+    p.add_argument("--csv-only", action="store_true",
+                   help="only write plots/baseline_vs_best.csv (no figures or tables)")
     args = p.parse_args()
     settings = load_settings(args.config)
     results_dir = Path(args.results).resolve() if args.results else settings.out_dir
@@ -374,14 +409,17 @@ def main():
     metric = settings.rank_metric
     print(f"{len(df)} rows ({len(ok)} used), stages {sorted(stages)}")
 
-    if "1" in stages:
+    if "1" in stages and not args.csv_only:
         plot_one_factor(ok, stages["1"], settings, base_id, out)
-    if "2" in stages:
+    if "2" in stages and not args.csv_only:
         plot_heatmaps(ok, stages["2"], base_id, out, shapes)
     ranked = rank_configs(df.assign(**{f"{metric}_rel": relative(df, metric, base_id)}), metric)
     ranked = ranked[ranked["config_id"] != base_id]
     if len(ranked):
         best = ranked.iloc[0]
+        export_baseline_vs_best(ok, base_id, best["config_id"], out, shapes, metric)
+        if args.csv_only:
+            return
         plot_baseline_vs_best(ok, base_id, best["config_id"], best["config_label"], out, shapes, metric)
     t = summary_tables(df, ok, stages, base_id, out, metric)
     print(t[t["shapes"] == "all"][["metric", "best_config", "best_mean", "baseline_mean",

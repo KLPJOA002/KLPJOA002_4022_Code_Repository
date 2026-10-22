@@ -32,6 +32,7 @@ def test_outputs_and_csv(ripple_ply, tmp_path):
     run = out / "t1__ripples"
     for name in ["metrics.json", "run.log", "heightmap_planar.npy", "heightmap_quadratic.npy",
                  "heightmap_planar.png", "detrend_comparison.png", "psd.png", "multiscale.png",
+                 "roi_preview.png", "detrend_explained.png", "detrend_metrics.png",
                  "psd_quadratic.csv", "multiscale_quadratic.csv"]:
         assert (run / name).is_file(), name
     table = rows(out / "roughness_results.csv")

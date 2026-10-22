@@ -74,7 +74,18 @@ def parse_origin(text):
     return v * 1e-3
 
 
+def identity_frame(points: np.ndarray) -> tuple[np.ndarray, Frame]:
+    """--orient none: the input frame is kept, so coordinates stay those of
+    the reference the scan was aligned to. The detrend still removes any
+    leftover tilt."""
+    frame = Frame(np.eye(3), np.zeros(3), 0.0, float("nan"), 1.0)
+    log("[orient] none: keeping the input frame (scan already aligned, e.g. to a reference)")
+    return np.asarray(points, dtype=float).copy(), frame
+
+
 def orient(points: np.ndarray, params) -> tuple[np.ndarray, Frame]:
+    if params.orientation == "none":
+        return identity_frame(points)
     c, n, major, keep = fit_plane(points, params.orient_clip_sigma, params.orient_iterations)
     origin = parse_origin(params.sensor_origin)
     side = None if origin is None else float((origin - c) @ n)
@@ -103,6 +114,10 @@ def orient(points: np.ndarray, params) -> tuple[np.ndarray, Frame]:
         f"{'facing the sensor' if side is not None and abs(side) > 1e-3 else 'input +Z side up'}")
     log(f"[orient] tilt removed {tilt:.2f} deg; plane RMS {rms * 1e3:.3f} mm over "
         f"{keep.mean():.1%} inliers")
+    if keep.mean() < 0.3:
+        warn(f"the levelling plane fit kept only {keep.mean():.0%} of the points: the scan is not "
+             "mostly a flat bed (an object, a table and a bed together?). Crop with --roi / "
+             "--pick-roi, or use --orient none for a scan already aligned to a reference")
     return oriented, frame
 
 
@@ -125,12 +140,28 @@ def round_sig(x: float, digits: int = 2) -> float:
     return float(round(x, -int(np.floor(np.log10(x))) + digits - 1))
 
 
-def crop(points: np.ndarray, params, grid: float) -> tuple[np.ndarray, dict]:
-    """ROI and edge trim in the oriented frame. Returns the keep mask and a
-    summary. The edge trim measures distance to the footprint's outer border
-    (interior holes do not count as border) on an occupancy grid."""
+def _empty_crop(what, points):
+    lo, hi = points[:, :2].min(axis=0) * 1e3, points[:, :2].max(axis=0) * 1e3
+    return ValueError(f"{what} contains no points; the scan spans x {lo[0]:.1f}..{hi[0]:.1f}, "
+                      f"y {lo[1]:.1f}..{hi[1]:.1f} mm in the analysis frame")
+
+
+def crop(points: np.ndarray, params, grid: float, region: np.ndarray | None = None) -> tuple[np.ndarray, dict]:
+    """Reference footprint, ROI rectangle, ROI polygon and edge trim, in the
+    analysis frame. Returns the keep mask and a summary. `region` is a
+    per-point mask (the reference's outline). The edge trim measures distance
+    to the footprint's outer border (interior holes do not count as border)
+    on an occupancy grid."""
     keep = np.ones(len(points), dtype=bool)
     info = {"n_before": int(len(points))}
+    if region is not None:
+        keep &= region
+        info["reference_footprint_points"] = int(region.sum())
+        log(f"[crop] reference footprint keeps {region.sum()} of {len(points)} points")
+        if keep.sum() == 0:
+            raise ValueError("no scan point lies over the reference's outline - is the scan aligned "
+                             "into the reference frame (e.g. Evaluate's aligned_error.ply)? Or pass "
+                             "--reference-crop none")
     if params.roi_mm:
         x0, y0, x1, y1 = (v * 1e-3 for v in params.roi_mm)
         keep &= (points[:, 0] >= x0) & (points[:, 0] <= x1) & (points[:, 1] >= y0) & (points[:, 1] <= y1)
@@ -138,9 +169,16 @@ def crop(points: np.ndarray, params, grid: float) -> tuple[np.ndarray, dict]:
         log(f"[crop] ROI x {params.roi_mm[0]:g}..{params.roi_mm[2]:g}, y {params.roi_mm[1]:g}.."
             f"{params.roi_mm[3]:g} mm keeps {keep.sum()} of {len(points)} points")
         if keep.sum() == 0:
-            lo, hi = points[:, :2].min(axis=0) * 1e3, points[:, :2].max(axis=0) * 1e3
-            raise ValueError(f"--roi {params.roi_mm} contains no points; the oriented scan spans "
-                             f"x {lo[0]:.1f}..{hi[0]:.1f}, y {lo[1]:.1f}..{hi[1]:.1f} mm")
+            raise _empty_crop(f"--roi {params.roi_mm}", points)
+    if params.roi_polygon_mm:
+        from matplotlib.path import Path as PolyPath
+        poly = np.asarray(params.roi_polygon_mm, dtype=float) * 1e-3
+        inside = PolyPath(poly).contains_points(points[:, :2])
+        keep &= inside
+        info["roi_polygon_mm"] = [list(v) for v in params.roi_polygon_mm]
+        log(f"[crop] ROI polygon ({len(poly)} vertices) keeps {keep.sum()} of {len(points)} points")
+        if keep.sum() == 0:
+            raise _empty_crop("the ROI polygon", points)
     if params.edge_trim_mm > 0:
         p = points[keep]
         lo = p[:, :2].min(axis=0)

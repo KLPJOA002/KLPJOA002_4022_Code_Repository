@@ -325,7 +325,8 @@ def bootstrap(h, valid, g, w, params, rng):
     use = V.mean(axis=(1, 2)) >= params.window_min_valid
     B, V = B[use], V[use]
     n = len(B)
-    out = {"bootstrap_window_mm": w * g * 1e3, "n_windows_used": int(n)}
+    out = {"bootstrap_window_mm": w * g * 1e3, "n_windows_used": int(n),
+           "bootstrap_Sq_point_mm": float("nan")}
     for k in ("Sq_ci95_lo_mm", "Sq_ci95_hi_mm", "Sdr_ci95_lo_pct", "Sdr_ci95_hi_pct",
               "Sal_ci95_lo_mm", "Sal_ci95_hi_mm"):
         out[k] = float("nan")
@@ -340,6 +341,10 @@ def bootstrap(h, valid, g, w, params, rng):
     Bm = np.where(V, Bz - np.nanmean(Bz, axis=(1, 2), keepdims=True), 0.0)
     acf, lv = masked_acf(Bm, V, w // 2, w // 2)
     sal = _nanmin(acf_crossings(acf, lv, params.acf_threshold, g))
+    # The CIs describe the windows actually resampled (those >= window_min_valid
+    # valid, in a centred tiling), which need not be the whole map: this is
+    # the point estimate that goes with them.
+    out["bootstrap_Sq_point_mm"] = float(np.sqrt(sumsq.sum() / cnt.sum())) * 1e3
     idx = rng.integers(0, n, (params.bootstrap_samples, n))
     sq_b = np.sqrt(sumsq[idx].sum(1) / cnt[idx].sum(1))
     sdr_b = (asum[idx].sum(1) / np.maximum(qn[idx].sum(1), 1) / (g * g) - 1) * 100
