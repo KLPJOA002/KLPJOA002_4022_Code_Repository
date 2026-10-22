@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .runner import Job, job_state
+from .runner import Job, job_is_current
 
 
 class Estimator:
@@ -46,7 +46,7 @@ class Estimator:
 
 def summarize(cfg, jobs: list[Job], run_dir: Path | None, workers: int, measured=None, verbose=False, log=print):
     est = Estimator(cfg, measured)
-    remaining = [j for j in jobs if run_dir is None or job_state(j, run_dir) is None]
+    remaining = [j for j in jobs if run_dir is None or not job_is_current(j, run_dir, False)]
     fused = [j for j in remaining if j.combo.kind == "fused"]
     singles = [j for j in remaining if j.combo.kind == "single"]
     sessions = {(j.session.wave, j.session.height): j.session for j in jobs}
@@ -56,6 +56,21 @@ def summarize(cfg, jobs: list[Job], run_dir: Path | None, workers: int, measured
         others = ", ".join(f"{k} ({v} scans)" for k, v in s.other_sessions.items())
         log(f"  {s.wave:10s} {s.height:6s} use {s.name} ({len(s.scans)} scans: rot {s.rotations}, "
             f"tilt {s.tilts[0]}..{s.tilts[-1]}); ignore {others}")
+
+    regs = {}
+    for j in jobs:
+        if j.registers_per_session:
+            regs.setdefault(str(j.reg_dir(run_dir or Path("RUN"))), j)
+    if regs:
+        have = [r for r in regs if run_dir is not None and (Path(r) / "poses.json").is_file()]
+        rto = (cfg.get("registration") or {}).get("timeout_s", 7200)
+        log(f"\nRegistration: session_poses - {len(regs)} session registration(s) (stage 1, timeout {rto} s), "
+            f"{len(have)} already have poses.json; each combination is then fused from them (stage 2)")
+        if verbose:
+            for r, j in regs.items():
+                log(f"  {j.session.wave}/{j.session.height}: {r}" + ("  (done)" if r in have else ""))
+    elif any(j.combo.kind == "fused" for j in jobs):
+        log("\nRegistration: per_combo - every combination registers its own scans (--legacy-per-combo)")
 
     if verbose:
         log("\nJobs:")

@@ -40,6 +40,12 @@ class EvalParams:
     # none   : use --init-transform (or identity) exactly as given
     align: str = "full"
     init_transform: str | None = None
+    # Hand correction of that seed, in the reference frame (the frame
+    # overlay.ply is drawn in): rotate this many degrees about the reference's
+    # normal through its centre, then move by "x,y,z" mm. For dragging a
+    # periodic part's alignment onto the right period before --align refine.
+    nudge_mm: str | None = None
+    nudge_rotate_deg: float = 0.0
     # Voxel size for the alignment copy of the scan, mm. 0 = automatic,
     # reference diagonal / 60 (2.4 mm for a 100x100x30 mm part). Metrics
     # always use the full-resolution cloud.

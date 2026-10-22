@@ -33,6 +33,23 @@ add_definitions(${PCL_DEFINITIONS})
 
 find_package(Threads REQUIRED)
 
+# jsoncpp reads and writes the poses / QC files (--save-poses, --load-poses,
+# --qc). Ubuntu: sudo apt install libjsoncpp-dev
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+include_directories(${JSONCPP_INCLUDE_DIRS})
+
+# Stamped into every poses / QC file, so a result can be traced to the build
+# that produced it. Taken at configure time - re-run cmake after committing.
+execute_process(COMMAND git describe --always --dirty
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                OUTPUT_VARIABLE FUSE_GIT_VERSION
+                OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+if(NOT FUSE_GIT_VERSION)
+    set(FUSE_GIT_VERSION "unknown")
+endif()
+add_definitions(-DFUSE_VERSION="${FUSE_GIT_VERSION}")
+
 add_executable(fuse_scans
     src/main.cpp
     src/fusion_pipeline.cpp
@@ -44,5 +61,6 @@ add_executable(fuse_scans
     src/scan_discovery.cpp
     src/tag_alignment.cpp
     src/visualizer.cpp
+    src/pose_io.cpp
 )
-target_link_libraries(fuse_scans ${PCL_LIBRARIES} Threads::Threads)
+target_link_libraries(fuse_scans ${PCL_LIBRARIES} ${JSONCPP_LIBRARIES} Threads::Threads)

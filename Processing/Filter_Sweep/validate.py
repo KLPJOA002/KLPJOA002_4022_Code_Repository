@@ -8,6 +8,9 @@ real librealsense ones. Run on any machine before trusting a sweep there.
 2. Filter equivalence: the Python filter path (pyrealsense2 software device on
    the cached frames) against decoder/rs_decode --filters (the system
    librealsense, i.e. what rs_marker links), frame by frame.
+3. History independence: spatial holes_fill configs give bit-identical output
+   whatever ran before them on the same software sensor, as in a sweep worker
+   (see filter_sweep/memory.py for why this can fail).
 
   validate.py --scans Small_Wave__863mm__A1,Big_Wave__863mm__A1
 """
@@ -20,6 +23,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from filter_sweep.memory import ensure_zeroed_malloc  # noqa: E402
+
+ensure_zeroed_malloc()   # as run_sweep.py, so this validates what the sweep runs
 
 import numpy as np  # noqa: E402
 
@@ -100,6 +106,41 @@ def check_filters(cache, scan, s) -> bool:
     return all_ok
 
 
+# Configs that leave pixels unwritten (spatial holes_fill), and configs run before them that
+# were seen to leave other data in the memory they then get (measured on Small_Wave 701mm A2).
+HISTORY_TARGETS = [{"spatial": {"holes_fill": 1}}, {"spatial": {"holes_fill": 3}}, {"spatial": {"holes_fill": 5}}]
+HISTORY_BEFORE = [{"decimation": {"magnitude": 4}}, {"decimation": {"magnitude": 8}}, {"temporal": {}}]
+
+
+def _candidate_outputs(cache, cfg, sw) -> dict:
+    m = cache.meta
+    chain, out = Chain(cfg), {}
+    for i in m["map"]["candidates"]:
+        fm = m["frames"][i]
+        f = chain.process(sw.frame(np.ascontiguousarray(cache.frame(i)), fm["frame_number"], fm["timestamp_ms"]))
+        out[i] = np.asanyarray(f.get_data()).copy()
+    return out
+
+
+def check_history(cache, s) -> bool:
+    sw = SoftwareDepth(cache.meta["stream"])
+    all_ok = True
+    for raw in HISTORY_TARGETS:
+        cfg = normalise(raw, s.filter_defaults)
+        ref = _candidate_outputs(cache, cfg, sw)
+        bad = 0
+        for before in HISTORY_BEFORE:
+            run_config(cache, normalise(before, s.filter_defaults), sw)
+            got = _candidate_outputs(cache, cfg, sw)
+            bad += sum(int((got[i] != ref[i]).sum()) for i in ref)
+        ok = bad == 0
+        all_ok &= ok
+        print(f"  history [{config_label(cfg)}] after {len(HISTORY_BEFORE)} other configs: {bad} pixel(s) differ "
+              f"from its first run  -> {'OK' if ok else 'DEPENDS ON HISTORY'}")
+    sw.close()
+    return all_ok
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--config")
@@ -119,6 +160,7 @@ def main():
         ok &= check_baseline(cache, s)
         if not args.no_filters:
             ok &= check_filters(cache, scan, s)
+            ok &= check_history(cache, s)
     print("\nALL OK" if ok else "\nSOME CHECKS FAILED")
     return 0 if ok else 1
 

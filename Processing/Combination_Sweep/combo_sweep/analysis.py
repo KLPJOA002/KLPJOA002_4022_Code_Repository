@@ -1,7 +1,9 @@
 """Figures, tables and summary.md from a run directory's results.csv.
 
 Figures (PNG + PDF) go to <run>/analysis/figures/, tables to <run>/analysis/.
-Only status == ok rows are used unless include_suspect is set.
+Only status == ok rows are used unless include_suspect is set, which also brings in
+needs_review rows (combinations including a scan the registration QC flagged). When a
+run directory holds both registration modes, only analysis.registration_mode is used.
 Palette and style as Parameter_Sweep/sweep/plots.py (validated, light mode).
 """
 
@@ -396,8 +398,14 @@ def analyze(cfg, run_dir: Path, within=None, include_suspect=None):
     out.mkdir(parents=True, exist_ok=True)
     _style()
 
-    keep = ["ok", "suspect"] if include_suspect else ["ok"]
+    keep = ["ok", "suspect", "needs_review"] if include_suspect else ["ok"]
     df = res[res["status"].isin(keep)].copy()
+    if "registration_mode" in df:
+        modes = set(df.loc[df["kind"] == "fused", "registration_mode"].dropna())
+        if len(modes) > 1:
+            want = acfg.get("registration_mode", "session_poses")
+            print(f"Both registration modes present ({sorted(modes)}); analysing {want} only")
+            df = df[(df["kind"] != "fused") | (df["registration_mode"] == want)]
     main = df[df["group"] != "voxel"]
     present = [m for m in metrics if m in df.columns]
     saved = []

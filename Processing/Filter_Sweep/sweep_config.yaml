@@ -53,6 +53,22 @@ warmup_frames: null
 # wheel's rs.pointcloud (2.58: same z, x/y up to 2.7% different towards the image corners).
 deprojection: rs_marker
 
+# Physical depth gate, applied to the selected frame's point cloud of EVERY config (baseline
+# included), after best-frame selection and before the crop. Points with depth (camera z) outside
+# [min_valid_depth_m, max_valid_depth_m] are dropped and counted (points_removed_depth_gate).
+# Selection is not affected (still rs_marker's non-zero pixel count).
+#   min: the D455/D456 cannot measure closer than its MinZ, ~0.52 m at 1280x720 (Intel D400
+#        datasheet). The cameras sit 641-933 mm above the table and the parts rise at most ~60 mm,
+#        so the nearest real surface is ~0.58 m (measured: no point closer than 592.8 mm in any of
+#        the 60 rs_marker baseline clouds). 0.3 m is far below both, so it never touches a real
+#        point; anything nearer is not a measurement (see memory.py for how such depths arose).
+#   max: null = no upper gate. Depth is 16-bit at 0.1 mm, so nothing exceeds 6.5535 m anyway, and
+#        real background beyond the table (up to that ceiling in the baseline clouds) is part of what
+#        the cropper sees; removing it would change the crop input.
+depth_gate:
+  min_valid_depth_m: 0.3
+  max_valid_depth_m: null
+
 # Crop (../Crop automatic AprilTag crop, used as-is) and the steps around it
 crop_margin_px: 10        # as Parameter_Sweep
 crop_frame_window: 15     # cropper default

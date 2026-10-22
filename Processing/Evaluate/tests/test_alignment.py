@@ -9,7 +9,7 @@ from conftest import SURFACES, fast_params, pose_error, synthetic_scan
 
 from scan_eval.metrics import compute_metrics
 from scan_eval.reference import UnitScaled
-from scan_eval.registration import align, apply
+from scan_eval.registration import align, apply, nudge_transform, parse_nudge
 from scan_eval.surface_def import load_reference
 
 SIGMA = 0.0003   # 0.3 mm, isotropic
@@ -62,6 +62,31 @@ def test_one_period_shift_is_undone(which, egg, egg_mesh):
     assert result.best.overlap_ref > 0.95
     assert not result.ambiguous
     assert metrics["acc_rmse_mm"] == pytest.approx(SIGMA * 1e3, rel=0.08)
+
+
+def test_nudge_moves_refine_onto_the_right_period(egg):
+    """--align refine from a seed one period off stays on the look-alike; a
+    rough hand nudge (45 of the 50 mm, plus a small turn) lets ICP finish the
+    job."""
+    scan, T_true = synthetic_scan(egg, sigma=SIGMA, seed=5, shift=[0.05, 0, 0])
+    shifted_back = T_true.copy()
+    shifted_back[:3, 3] -= [0.05, 0, 0]
+    params = fast_params(align="refine")
+    stuck, _ = _run(egg, scan, params, init=T_true)
+    assert pose_error(stuck.transform, shifted_back, scan)[0] > 0.02
+    seed = nudge_transform(T_true, egg, "-45,0,0", 4.0)
+    result, metrics = _run(egg, scan, params, init=seed)
+    shift_err, _ = pose_error(result.transform, shifted_back, scan)
+    assert shift_err < 0.3e-3, f"nudged refine missed by {shift_err * 1e3:.2f} mm"
+    assert metrics["acc_rmse_mm"] == pytest.approx(SIGMA * 1e3, rel=0.08)
+
+
+def test_nudge_parsing():
+    assert np.allclose(parse_nudge("-25, 0,1.5"), [-0.025, 0, 0.0015])
+    assert np.allclose(parse_nudge([1, 2, 3]), [0.001, 0.002, 0.003])
+    assert not parse_nudge(None).any()
+    with pytest.raises(ValueError, match="--nudge"):
+        parse_nudge("1,2")
 
 
 def test_partial_periodic_coverage_is_flagged_ambiguous(egg):

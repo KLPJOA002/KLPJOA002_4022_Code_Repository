@@ -195,6 +195,7 @@ exactly onto F = 0.
 ```bash
 --init-transform prev/transform.txt   # seed the alignment (4x4, scan -> reference, metres)
 --align refine | none                 # ICP only from the seed / use the seed as-is
+--nudge=-25,0,0  --nudge-rotate 90    # move the seed first: mm / degrees, reference frame
 --units mm   --scale 1.002            # scan units; an explicit correction factor
 --allow-scale                         # similarity alignment; reports the recovered scale
 --thresholds 0.25,0.5,1,2             # F-score / completeness thresholds, mm
@@ -257,6 +258,24 @@ alignment doesn't trust any single method:
 4. **The winner and the runner-up** are reported: fitness (overlap scan/ref),
    inlier RMSE, and the margin between them. Below 15% the run is flagged
    **`[AMBIGUOUS]`**: check it visually, or seed it with `--init-transform`.
+
+   **Fixing a wrong pose.** If overlay.ply shows the scan a period over, or
+   turned, take that run's transform.txt and move it by hand, in the
+   reference frame (the frame overlay.ply is drawn in, so offsets can be
+   read straight off it). `--nudge-rotate DEG` turns about the reference's
+   normal through its centre, then `--nudge X,Y,Z` (mm) translates. Preview
+   with `--align none`, then let ICP finish with `--align refine`:
+
+   ```bash
+   evaluate_scans.py ... --init-transform out/run/transform.txt --nudge=-25,0,0 --align none   scan.ply
+   evaluate_scans.py ... --init-transform out/run/transform.txt --nudge=-25,0,0 --align refine scan.ply
+   ```
+
+   ICP only reaches the nearest fit, so the nudge has to land the scan
+   closer to the right pose than to the wrong one (within about a quarter
+   period). Use `=` with negative values (argparse would read `-25,...` as a
+   flag). In refine mode the reported margin is against the identity only,
+   so it says nothing about ambiguity.
 5. **The final pose is polished against the exact surface.** Each iteration
    uses true closest points and normals from the reference, not samples,
    with MAD trimming of stragglers. Scale is also solved for when

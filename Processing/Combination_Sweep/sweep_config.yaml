@@ -43,6 +43,21 @@ fuse:
     # rot-all_tilt-0-pm10 -0.99 -> -0.30 mm, all-44 fused surface thickness 0.18 -> 0.08 mm).
     rotation-axis: z
   timeout_s: 3600                # a fusion running longer than this is killed and recorded as failed
+  # The IMU-to-cloud frame now defaults to rx180 inside fuse_scans (a rig constant; see
+  # ../Fuse/README.md). Add `imu-frame: auto` here to reproduce the old per-run choice.
+
+# Registration (see README, "Registration modes").
+#   session_poses: stage 1 registers each session ONCE on all its scans (poses.json); stage 2
+#     fuses every combination from those poses, with no registration of its own. A combination's
+#     poses therefore come from registering all 44 scans: the sweep measures the value of a set
+#     of viewpoints *given good registration*, not how well that subset registers alone.
+#   per_combo: each combination registers its own scans from scratch (the original sweep;
+#     also `run --legacy-per-combo`). Kept as a secondary comparison.
+registration:
+  mode: session_poses
+  timeout_s: 7200                # stage 1 per session; a timeout goes to review_queue.csv
+  auto_retry: true               # fuse_scans --auto-retry on the scans QC flags
+  auto_retry_max_scans: 12       # worst first; the rest go to review as they are
 
 # Crop (../Crop automatic AprilTag crop, used as-is; settings as Filter_Sweep / Parameter_Sweep)
 crop:
@@ -127,7 +142,8 @@ analysis:
     covered_fraction: higher
     chamfer_mm: lower
   within_percent: 5                # smallest subset within X% of all-scans quality
-  include_suspect: false
+  include_suspect: false           # true also includes needs_review rows
+  registration_mode: session_poses # analysed when a run directory holds both modes
 
 # ---------------------------------------------------------------------------------------
 # Voxel / cell sensitivity (separate command: run_sweep.py voxel)

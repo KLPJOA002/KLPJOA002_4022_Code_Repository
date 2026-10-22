@@ -1,6 +1,20 @@
 #include "rig_geometry.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
+
+bool parseImuFrame(const std::string& name, Eigen::Vector3f& diagonal)
+{
+    std::string n = name;
+    std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return std::tolower(c); });
+    if      (n == "identity") diagonal = Eigen::Vector3f( 1,  1,  1);
+    else if (n == "rx180")    diagonal = Eigen::Vector3f( 1, -1, -1);
+    else if (n == "ry180")    diagonal = Eigen::Vector3f(-1,  1, -1);
+    else if (n == "rz180")    diagonal = Eigen::Vector3f(-1, -1,  1);
+    else return false;
+    return true;
+}
 
 Eigen::Matrix4f rotationAboutAxis(RigAxis axis, float degrees_signed)
 {

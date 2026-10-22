@@ -160,6 +160,18 @@ def point_cloud(depth_frame, deprojection: str = "rs_marker") -> np.ndarray:
     return np.column_stack([rays[:, 0] * zz, -rays[:, 1] * zz, -zz]).astype(np.float32)
 
 
+def depth_gate(points: np.ndarray, min_m=None, max_m=None):
+    """Drop points whose depth (camera z; points are in export_to_ply's frame, so depth = -z)
+    is below min_m or above max_m. Returns (kept points, number removed)."""
+    depth = -points[:, 2]
+    keep = np.ones(len(points), bool)
+    if min_m is not None:
+        keep &= depth >= min_m
+    if max_m is not None:
+        keep &= depth <= max_m
+    return points[keep], int(len(points) - keep.sum())
+
+
 def run_config(cache, cfg: dict, sw: SoftwareDepth, deprojection: str = "rs_marker") -> dict:
     """Filter the scan, pick the best frame, return it with its point cloud
     (Nx3 float32 in export_to_ply's frame: x, -y, -z, zero points dropped)."""
